@@ -1324,7 +1324,7 @@ void USB1_IRQHandler(void)
   {
     USB_Reset();
     USBA_ResetCore();
-    DBG_Led_TimedOn(LED_GENERAL_ACTIVITY, -2);
+    // indicate general activity
     return;
   }
 
@@ -1431,7 +1431,7 @@ void USB1_IRQHandler(void)
   }
 
   if (activity)
-    DBG_Led_TimedOn(LED_GENERAL_ACTIVITY, -2);
+    ;  // indicate general activity
   return;
 }
 

@@ -19,12 +19,12 @@ typedef struct
 } LED_t;
 
 static LED_t leds[6] = {
-  { 0, 0, pLED_REDA },
-  { 0, 0, pLED_REDB },
-  { 0, 0, pLED_YELLOWA },
-  { 0, 0, pLED_YELLOWB },
-  { 0, 0, pLED_GREENA },
-  { 0, 0, pLED_GREENB },
+  { 0, 0, pLED_RED0 },
+  { 0, 0, pLED_GREEN0 },
+  { 0, 0, pLED_BLUE0 },
+  { 0, 0, pLED_RED1 },
+  { 0, 0, pLED_GREEN1 },
+  { 0, 0, pLED_BLUE1 },
 };
 
 #define ON  0

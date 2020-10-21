@@ -4,10 +4,31 @@
 #include "usb/nl_usb_descmidi.h"
 #include "drv/nl_dbg.h"
 #include "io/pins.h"
+#include "sys/globals.h"
 
 #define BUFFER_SIZE            (1024)  // same size as low-level MIDI transfer buffers !!
 #define NUMBER_OF_BUFFERS      (8)     // number of buffers, must be 2^N !
 #define NUMBER_OF_BUFFERS_MASK (NUMBER_OF_BUFFERS - 1)
+
+#if USBA_PORT_FOR_MIDI == 0
+#define LED_REDa   (0)
+#define LED_GREENa (1)
+#define LED_BLUEa  (2)
+#else
+#define LED_REDa   (3)
+#define LED_GREENa (4)
+#define LED_BLUEa  (5)
+#endif
+
+#if USBB_PORT_FOR_MIDI == 0
+#define LED_REDb   (0)
+#define LED_GREENb (1)
+#define LED_BLUEb  (2)
+#else
+#define LED_REDb   (3)
+#define LED_GREENb (4)
+#define LED_BLUEb  (5)
+#endif
 
 // ringbuffer of buffers
 typedef struct
@@ -40,6 +61,21 @@ static inline int fillBuffer(uint8_t const which, uint8_t *buff, uint32_t len)
   uint16_t const      savedBufHeadIndex = p->bufHeadIndex;
   while (len)
   {
+    if (*buff < 0x80)
+    {
+      if (which == A)
+      {
+        DBG_Led(LED_REDa, (*buff) & 0b001);
+        DBG_Led(LED_GREENa, (*buff) & 0b010);
+        DBG_Led(LED_BLUEa, (*buff) & 0b100);
+      }
+      else
+      {
+        DBG_Led(LED_REDb, (*buff) & 0b001);
+        DBG_Led(LED_GREENb, (*buff) & 0b010);
+        DBG_Led(LED_BLUEb, (*buff) & 0b100);
+      }
+    }
     if (p->bufHeadIndex >= BUFFER_SIZE)
     {  // current head is full, switch to next one
       uint16_t tmpBufHead = (p->bufHead + 1) & NUMBER_OF_BUFFERS_MASK;
@@ -61,13 +97,13 @@ static inline int fillBuffer(uint8_t const which, uint8_t *buff, uint32_t len)
 static void ReceiveA(uint8_t *buff, uint32_t len)
 {
   if (!fillBuffer(B, buff, len))  // out of buffers ?
-    DBG_Led(LED_DATA_LOSS, 1);
+    ;
 }
 
 static void ReceiveB(uint8_t *buff, uint32_t len)
 {
   if (!fillBuffer(A, buff, len))  // out of buffers ?
-    DBG_Led(LED_DATA_LOSS, 1);
+    ;
 }
 
 void MIDI_PROXY_Init(void)
@@ -116,8 +152,7 @@ static inline void checkSends(uint8_t const which)
 
   if (!MIDI_isConfigured(which) || bytesToSend(which))
   {  // not config'd or last transfer still in progress
-    // DBG_Led_TimedOn(LED_TRAFFIC_STALL, -2);
-	DBG_Led(LED_TRAFFIC_STALL, 1);
+    ;
     return;
   }
 
@@ -125,11 +160,10 @@ static inline void checkSends(uint8_t const which)
   {  // send stashed buffers first
     if (!MIDI_Send(which, p->buff[p->bufTail], BUFFER_SIZE))
     {  // send failed
-      DBG_Led(LED_DATA_LOSS, 1);
-      DBG_Led_TimedOn(LED_ERROR, -10);  // send failure
+      ;
     }
     else
-      DBG_Led_TimedOn(LED_MIDI_TRAFFIC, -2);  // success
+      ;  // success
     p->bufTail = (p->bufTail + 1) & NUMBER_OF_BUFFERS_MASK;
     return;
   }
@@ -137,10 +171,8 @@ static inline void checkSends(uint8_t const which)
   {  // send current buffer
     if (!MIDI_Send(which, p->buff[p->bufHead], p->bufHeadIndex))
     {  // send failed
-      DBG_Led(LED_DATA_LOSS, 1);
-      DBG_Led_TimedOn(LED_ERROR, -10);  // send failure
-    }
-    DBG_Led_TimedOn(LED_MIDI_TRAFFIC, -2);  // success
+      ;
+    };  // success
     p->bufHead      = (p->bufHead + 1) & NUMBER_OF_BUFFERS_MASK;
     p->bufHeadIndex = 0;
     p->bufTail      = p->bufHead;
@@ -169,7 +201,7 @@ void MIDI_PROXY_ProcessFast(void)
     }
     USBB_NotConnected = 3;
   }
-  DBG_Led(LED_CONNECTED, (!USBA_NotConnected && !USBB_NotConnected && USBA_MIDI_IsConfigured() && USBB_MIDI_IsConfigured()));
+  // int connected = (!USBA_NotConnected && !USBB_NotConnected && USBA_MIDI_IsConfigured() && USBB_MIDI_IsConfigured());
 
   checkSends(A);
   checkSends(B);

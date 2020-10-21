@@ -24,12 +24,12 @@
 #define LED_F          pGPIO_Word(1,  9)
 
 // LED assignments :
-#define pLED_REDB    LED_A
-#define pLED_REDA    LED_D
-#define pLED_YELLOWB LED_B
-#define pLED_YELLOWA LED_E
-#define pLED_GREENB  LED_C
-#define pLED_GREENA  LED_F
+#define pLED_RED0	 LED_A
+#define pLED_GREEN0  LED_B
+#define pLED_BLUE0   LED_C
+#define pLED_RED1	 LED_D
+#define pLED_GREEN1  LED_E
+#define pLED_BLUE1   LED_F
 
 static inline void debugPinsInit(void)
 {
@@ -39,19 +39,19 @@ static inline void debugPinsInit(void)
   LED_D_init();
   LED_E_init();
   LED_F_init();
-  *LED_A = 1;
-  *LED_B = 1;
-  *LED_C = 1;
-  *LED_D = 1;
-  *LED_E = 1;
-  *LED_F = 1;
+  *LED_A = 0;
+  *LED_B = 0;
+  *LED_C = 0;
+  *LED_D = 0;
+  *LED_E = 0;
+  *LED_F = 0;
 }
 
 
 // --------------- USB VBUS-Monitors ----------------
-#define pinUSB0_VBUS_init() GPIO_DIR_IN(3, 0); SFSP(6, 1) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_DPD + SFS_DPU + 0
+#define pinUSB0_VBUS_init() GPIO_DIR_IN(3, 0); SFSP(6, 1) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0
 #define pinUSB0_VBUS          GPIO_Word(3, 0)
-#define pinUSB1_VBUS_init() GPIO_DIR_IN(3, 1); SFSP(6, 2) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_DPD + SFS_DPU + 0
+#define pinUSB1_VBUS_init() GPIO_DIR_IN(3, 1); SFSP(6, 2) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0
 #define pinUSB1_VBUS          GPIO_Word(3, 1)
 
 static inline void USBPinsInit(void)
