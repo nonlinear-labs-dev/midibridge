@@ -13,7 +13,7 @@
 #include "sys/nl_watchdog.h"
 //#include "sys/delays.h"
 #include "CPU_clock.h"
-#include "drv/nl_dbg.h"
+#include "drv/nl_leds.h"
 #include "drv/nl_cgu.h"
 #include "io/pins.h"
 #include "usb/nl_usba_midi.h"
@@ -56,17 +56,23 @@ void Init(void)
   /* I/O pins */
   PINS_Init();
 
+  /* LEDs */
+  LED_Init();
+
   /* MIDI Proxy */
   MIDI_PROXY_Init();
 
   /* scheduler */
   COOS_Init();
 
+  // clang-format off
   COOS_Task_Add(SYS_WatchDogClear, 0, 1);  // every 125 us
+  COOS_Task_Add(LED_ProcessPWM,    1, 2);  // every 250 us  // PWM-LEDs
 
 #define TS (10)                                            // 1.25 ms time slice
-  COOS_Task_Add(MIDI_PROXY_Process, 1 * TS + 0, 40 * TS);  // every 50 ms, processes error and warning LEDs
-  COOS_Task_Add(DBG_Process, 2 * TS + 1, 40 * TS);         // every 50 ms, check USB connection status etc
+  COOS_Task_Add(MIDI_PROXY_Process, 1 * TS + 2, 40 * TS);  // every 50 ms
+  COOS_Task_Add(LED_Process,        2 * TS + 3, 20 * TS);  // every 25 ms
+  // clang-format on
 
   /* M0 init  */
   // cr_start_m0(SLAVE_M0APP, &__core_m0app_START__);
