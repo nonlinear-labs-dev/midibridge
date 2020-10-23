@@ -4,7 +4,6 @@
     @author		[2013-07-07 DTZ]
 *******************************************************************************/
 #include "sys/nl_coos.h"
-#include "drv/nl_dbg.h"
 
 #define COOS_MAX_TASKS 4  // max number of task the COOS should handle (memory size)
 
