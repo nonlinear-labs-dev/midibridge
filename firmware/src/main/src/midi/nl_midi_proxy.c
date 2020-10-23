@@ -38,7 +38,7 @@ typedef struct
 static proxyStatus_t status[2];
 
 // timeouts in 50ms multiples
-#define TIMEOUT_MIDI_TRAFFIC      (2)    // 100ms
+#define TIMEOUT_MIDI_TRAFFIC      (4)    // 200ms
 #define TIMEOUT_LOW_LEVEL_TRAFFIC (2)    // 100ms
 #define TIMEOUT_BUFFERING         (100)  // 5s
 #define TIMEOUT_DATALOSS          (400)  // 20s
