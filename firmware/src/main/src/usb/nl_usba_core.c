@@ -11,7 +11,6 @@
 #include "usb/nl_usbd.h"
 #include "usb/nl_usba_core.h"
 #include "sys/nl_stdlib.h"
-#include "drv/nl_dbg.h"
 
 #ifdef __CC_ARM
 #pragma diag_suppress 111, 177, 1441
@@ -1304,6 +1303,14 @@ static void USB_EndPoint0(uint32_t event)
   }
 }
 
+static uint8_t activity = 0;
+uint8_t        USBA_GetActivity(void)
+{
+  uint8_t ret = activity;
+  activity    = 0;
+  return ret;
+}
+
 /******************************************************************************/
 /** @brief		USB Interrupt Service Routine
 *******************************************************************************/
@@ -1314,7 +1321,6 @@ void USB1_IRQHandler(void)
 #endif
 {
   uint32_t disr, val, n;
-  uint8_t  activity = 0;
 
   disr               = LPC_USBA->USBSTS_D; /* Device Interrupt Status */
   LPC_USBA->USBSTS_D = disr;
