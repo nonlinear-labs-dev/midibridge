@@ -26,70 +26,119 @@
 #define pLED_BLUEb  (pLED_BLUE1)
 #endif
 
-static uint16_t       pwmBufferIndex;
-static uint8_t const *pwmBuffer[2];
+typedef struct __attribute__((__packed__))
+{
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
+} RGB_t;
 
-#define PWM_LENGTH (5)
+static uint16_t     pwmBufferBit;
+static RGB_t const *pwmBuffer[2];
+
 // clang-format off
-static uint8_t const pwmColorTable[27][PWM_LENGTH] = {  // NOTE: drive is inverted
-  { ~0b000, ~0b000, ~0b000, ~0b000, ~0b000 },  // 0 : R0 G0 B0
-  { ~0b001, ~0b000, ~0b000, ~0b000, ~0b000 },  // 1 : R1 G0 B0
-  { ~0b001, ~0b001, ~0b001, ~0b001, ~0b001 },  // 2 : R2 G0 B0
-
-  { ~0b010, ~0b000, ~0b000, ~0b000, ~0b000 },  // 3 : R0 G1 B0
-  { ~0b001, ~0b010, ~0b000, ~0b000, ~0b000 },  // 4 : R1 G1 B0
-  { ~0b001, ~0b001, ~0b011, ~0b001, ~0b001 },  // 5 : R2 G1 B0
-
-  { ~0b010, ~0b010, ~0b010, ~0b010, ~0b010 },  // 6 : R0 G2 B0
-  { ~0b011, ~0b010, ~0b010, ~0b010, ~0b010 },  // 7 : R1 G2 B0
-  { ~0b011, ~0b011, ~0b011, ~0b011, ~0b011 },  // 8 : R2 G2 B0
-
-  { ~0b000, ~0b000, ~0b100, ~0b000, ~0b000 },  // 9 : R0 G0 B1
-  { ~0b001, ~0b000, ~0b100, ~0b000, ~0b000 },  // 10: R1 G0 B1
-  { ~0b001, ~0b001, ~0b101, ~0b001, ~0b001 },  // 11: R2 G0 B1
-
-  { ~0b010, ~0b000, ~0b100, ~0b000, ~0b000 },  // 12: R0 G1 B1
-  { ~0b001, ~0b010, ~0b100, ~0b000, ~0b000 },  // 13: R1 G1 B1
-  { ~0b001, ~0b001, ~0b011, ~0b101, ~0b001 },  // 14: R2 G1 B1
-
-  { ~0b110, ~0b010, ~0b010, ~0b010, ~0b010 },  // 15: R0 G2 B1
-  { ~0b011, ~0b010, ~0b110, ~0b010, ~0b010 },  // 16: R1 G2 B1
-  { ~0b011, ~0b011, ~0b011, ~0b011, ~0b111 },  // 17: R2 G2 B1
-
-  { ~0b100, ~0b100, ~0b100, ~0b100, ~0b100 },  // 18: R0 G0 B2
-  { ~0b101, ~0b100, ~0b100, ~0b100, ~0b100 },  // 19: R1 G0 B2
-  { ~0b101, ~0b101, ~0b101, ~0b101, ~0b101 },  // 20: R2 G0 B2
-
-  { ~0b110, ~0b100, ~0b100, ~0b100, ~0b100 },  // 21: R0 G1 B2
-  { ~0b101, ~0b110, ~0b100, ~0b100, ~0b100 },  // 22: R1 G1 B2
-  { ~0b101, ~0b101, ~0b011, ~0b101, ~0b101 },  // 23: R2 G1 B2
-
-  { ~0b110, ~0b110, ~0b110, ~0b110, ~0b110 },  // 24: R0 G2 B2
-  { ~0b111, ~0b110, ~0b110, ~0b110, ~0b110 },  // 25: R1 G2 B2
-  { ~0b111, ~0b111, ~0b111, ~0b111, ~0b111 },  // 26: R2 G2 B2
+static RGB_t const pwmColorTable[] = {
+  {  // 0  : all OFF
+    .r = 0b00000000,
+    .g = 0b00000000,
+    .b = 0b00000000 },
+  {  // 1  : very dim red (1/8)
+	.r = 0b10000000,
+	.g = 0b00000000,
+	.b = 0b00000000 },
+  {  // 2  : dim red (2/8)
+	.r = 0b10001000,
+	.g = 0b00000000,
+	.b = 0b00000000 },
+  {  // 3  : bright red (5/8)
+	.r = 0b11101010,
+	.g = 0b00000000,
+	.b = 0b00000000 },
+  {  // 4  : very bright red (8/8)
+	.r = 0b11111111,
+	.g = 0b00000000,
+	.b = 0b00000000 },
+  {  // 5  : very dim green (1/8)
+	.r = 0b00000000,
+	.g = 0b01000000,
+	.b = 0b00000000 },
+  {  // 6  : dim green (2/8)
+	.r = 0b00000000,
+	.g = 0b01000100,
+	.b = 0b00000000 },
+  {  // 7  : bright green 5/8)
+	.r = 0b00000000,
+	.g = 0b01110101,
+	.b = 0b00000000 },
+  {  // 8  : very bright green (8/8)
+	.r = 0b00000000,
+	.g = 0b11111111,
+	.b = 0b00000000 },
+  {  // 9  : very dim blue (1/8)
+	.r = 0b00000000,
+	.g = 0b00000000,
+	.b = 0b00100000 },
+  {  // 10 : dim blue (2/8)
+	.r = 0b00000000,
+	.g = 0b00000000,
+	.b = 0b00100010 },
+  {  // 11 : bright blue 5/8)
+	.r = 0b00000000,
+	.g = 0b00000000,
+	.b = 0b01011011 },
+  {  // 12 : very bright blue (8/8)
+	.r = 0b00000000,
+	.g = 0b00000000,
+	.b = 0b11111111 },
+  {  // 13 : very dim orange (1/8)
+	.r = 0b10000000,
+	.g = 0b00001000,
+	.b = 0b00000000 },
+  {  // 14 : dim orange (2/8)
+	.r = 0b10001000,
+	.g = 0b00100010,
+	.b = 0b00000000 },
+  {  // 15 : bright orange 5/8)
+	.r = 0b11101010,
+	.g = 0b01011101,
+	.b = 0b00000000 },
+  {  // 16 : very bright orange (8/8)
+	.r = 0b11111111,
+	.g = 0b11111111,
+	.b = 0b00000000 },
 };
 // clang-format on
 
 void LED_SetColor(uint8_t const ledId, uint8_t const color)
 {
-  pwmBuffer[ledId & 1] = &(pwmColorTable[color & 0b111111][0]);
+  pwmBuffer[ledId] = &(pwmColorTable[color]);
 }
 
 // clang-format off
-static uint8_t colorTable[2][5] = {
+static uint8_t colorTable[4][5] = {
   {
-    0,   // dim OFF
-	9,   // dim BLUE
-	3,   // dim GREEN
-	4,   // dim ORANGE
-	1,   // dim RED
+	9,   // very dim BLUE
+	5,   // very dim GREEN
+	13,  // very dim ORANGE
+	1,   // very dim RED
   },
   {
-    0,   // bright OFF
-	18,  // bright BLUE
-	6,   // bright GREEN
-	8,   // bright ORANGE
-	2,   // bright RED
+	10,  // dim BLUE
+	6,   // dim GREEN
+	14,  // dim ORANGE
+	2,   // dim RED
+  },
+  {
+	11,  // bright BLUE
+	7,   // bright GREEN
+	15,  // bright ORANGE
+	3,   // bright RED
+  },
+  {
+	12,  // very bright BLUE
+	8,   // very bright GREEN
+	16,  // very bright ORANGE
+	4,   // very bright RED
   },
 };
 // clang-format on
@@ -99,7 +148,7 @@ void LED_SetColorByParam(uint8_t const ledId, uint8_t const baseColor, uint8_t c
   if (baseColor == 0 || intensity == 0)
     LED_SetColor(ledId, 0);
   else
-    LED_SetColor(ledId, colorTable[(intensity - 1) & 1][baseColor & 7]);
+    LED_SetColor(ledId, colorTable[intensity - 1][baseColor - 1]);
 }
 
 /******************************************************************************/
@@ -107,20 +156,17 @@ void LED_SetColorByParam(uint8_t const ledId, uint8_t const baseColor, uint8_t c
 *******************************************************************************/
 void LED_ProcessPWM(void)  // call-rate > 1kHz (<1ms) for low flicker
 {
-  uint8_t pattern;
+  pwmBufferBit >>= 1;
+  if (pwmBufferBit == 0)
+    pwmBufferBit = 0x80;
 
-  pattern      = pwmBuffer[0][pwmBufferIndex];
-  *pLED_REDa   = pattern & 0x01;
-  *pLED_GREENa = pattern & 0x02;
-  *pLED_BLUEa  = pattern & 0x04;
+  *pLED_REDa   = (0 == (pwmBuffer[0]->r & pwmBufferBit));
+  *pLED_GREENa = (0 == (pwmBuffer[0]->g & pwmBufferBit));
+  *pLED_BLUEa  = (0 == (pwmBuffer[0]->b & pwmBufferBit));
 
-  pattern      = pwmBuffer[1][pwmBufferIndex];
-  *pLED_REDb   = pattern & 0x01;
-  *pLED_GREENb = pattern & 0x02;
-  *pLED_BLUEb  = pattern & 0x04;
-
-  if (++pwmBufferIndex >= PWM_LENGTH)
-    pwmBufferIndex = 0;
+  *pLED_REDb   = (0 == (pwmBuffer[1]->r & pwmBufferBit));
+  *pLED_GREENb = (0 == (pwmBuffer[1]->g & pwmBufferBit));
+  *pLED_BLUEb  = (0 == (pwmBuffer[1]->b & pwmBufferBit));
 }
 
 typedef struct
@@ -179,24 +225,24 @@ void LED_Process(void)
   toggle ^= 1;
   for (int ledId = 0; ledId < 2; ledId++)
   {
-    uint8_t on = 1;
+    uint8_t flicker = 1;
     if (ledState[ledId].flickering)
-      on = toggle;
+      flicker = toggle;
 
     uint8_t intensity = 0;
     if (ledState[ledId].bright)
     {
-      if (on)
-        intensity = 2;
+      if (flicker)
+        intensity = 4;
       else
-        intensity = 1;
+        intensity = 0;
     }
     else
     {
-      if (on)
+      if (flicker)
         intensity = 1;
       else
-        intensity = 0;
+        intensity = 2;
     }
     LED_SetColorByParam(ledId, ledState[ledId].baseColor, intensity);
   }
