@@ -302,15 +302,6 @@ uint8_t USBA_MIDI_StringDescriptor[] = {
 #endif
   'S', 0,
   ')', 0,
-  // UUID hash
-  '0', 0,
-  '0', 0,
-  '0', 0,
-  '0', 0,
-  '0', 0,
-  '0', 0,
-  '0', 0,
-  '0', 0,
   0, 0
 
 };
@@ -356,15 +347,6 @@ uint8_t USBB_MIDI_StringDescriptor[] = {
 #endif
   'S', 0,
   ')', 0,
-  // UUID hash
-  '0', 0,
-  '0', 0,
-  '0', 0,
-  '0', 0,
-  '0', 0,
-  '0', 0,
-  '0', 0,
-  '0', 0,
   0, 0
 };
 
@@ -380,18 +362,3 @@ const uint8_t USB_MIDI_DeviceQualifier[] = {
   0x01,                                 /* bNumOtherSpeedConfigurations */
   0x00                                  /* bReserved */
 };
-
-void USB_MIDI_setStringDescriptorHash(uint32_t hash)
-{
-  uint16_t hashPos = sizeof(USBA_MIDI_StringDescriptor) - 2 - 2 * 8;
-  for (int i = 0; i < 8; i++)  // 8 nibbles
-  {
-    char c = '0';
-    c += hash & 0xF;  // isolate nibble
-    if (c > '9')
-      c += 'a' - '9' - 1;
-    USBA_MIDI_StringDescriptor[hashPos] = USBB_MIDI_StringDescriptor[hashPos] = c;
-    hashPos += 2;
-    hash >>= 4;
-  }
-}
