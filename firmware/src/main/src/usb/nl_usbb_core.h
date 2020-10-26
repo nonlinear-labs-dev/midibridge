@@ -21,7 +21,8 @@ void USB0_IRQHandler(void);
 void USB1_IRQHandler(void);
 #endif
 
-uint8_t USBB_GetActivity(void);
+uint8_t USBB_GetActivity(void);  // resets activity flag
+uint8_t USBB_SetupComplete(void);
 
 /* USB Core Functions */
 void     USBB_Core_Init(void);

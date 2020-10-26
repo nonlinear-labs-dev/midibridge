@@ -263,8 +263,25 @@ void USBB_Core_Init(void)
 #endif
 }
 
+static uint8_t activity                   = 0;
+static uint8_t gotConfigDescriptorRequest = 0;
+
+uint8_t USBB_GetActivity(void)
+{
+  uint8_t ret = activity;
+  activity    = 0;
+  return ret;
+}
+
+uint8_t USBB_SetupComplete(void)
+{
+  return gotConfigDescriptorRequest;
+}
+
 void USBB_Core_DeInit(void)
 {
+  gotConfigDescriptorRequest = 0;
+
   /* Turn off the phy */
 #if USBB_PORT_FOR_MIDI == 0
   LPC_CREG->CREG0 |= (1 << 5);
@@ -651,8 +668,9 @@ uint32_t USBB_ReqGetDescriptor(void)
           {
             return (FALSE);
           }
-          EP0Data.pData = pD;
-          len           = ((USB_CONFIGURATION_DESCRIPTOR *) pD)->wTotalLength;
+          EP0Data.pData              = pD;
+          len                        = ((USB_CONFIGURATION_DESCRIPTOR *) pD)->wTotalLength;
+          gotConfigDescriptorRequest = 1;
           break;
         case USB_STRING_DESCRIPTOR_TYPE:
           pD = (uint8_t *) USB_StringDescriptor;
@@ -1301,14 +1319,6 @@ static void USB_EndPoint0(uint32_t event)
       USB_ClrStallEP(0x80);
       break;
   }
-}
-
-static uint8_t activity = 0;
-uint8_t        USBB_GetActivity(void)
-{
-  uint8_t ret = activity;
-  activity    = 0;
-  return ret;
 }
 
 /******************************************************************************/
