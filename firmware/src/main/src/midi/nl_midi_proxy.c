@@ -7,6 +7,7 @@
 #include "io/pins.h"
 #include "sys/globals.h"
 #include "drv/nl_leds.h"
+#include "midi/nl_midi_isp.h"
 
 #define BUFFER_SIZE            (1024)  // same size as low-level MIDI transfer buffers !!
 #define NUMBER_OF_BUFFERS      (8)     // number of buffers, must be 2^N !
@@ -28,7 +29,8 @@ static ringbuffer_t rb[2];
 
 typedef struct
 {
-  uint16_t connected;
+  uint16_t buspower;
+  uint16_t initialized;
   uint16_t buffering;
   uint16_t dataLoss;
   uint16_t lowLevelTraffic;
@@ -54,32 +56,88 @@ static void ringbufferReset(void)
   }
 }
 
+static void showIspStart(void)
+{
+  LED_SetState(A, COLOR_BLUE, 1, 1);
+  LED_SetState(B, COLOR_BLUE, 1, 1);
+}
+
+static void showIspEnd(void)
+{
+  LED_SetState(A, COLOR_GREEN, 1, 1);
+  LED_SetState(B, COLOR_GREEN, 1, 1);
+}
+
+static void showIspFill(void)
+{
+  LED_SetState(A, COLOR_ORANGE, 1, 1);
+  LED_SetState(B, COLOR_ORANGE, 1, 1);
+}
+
+static void showIspExecute(void)
+{
+  LED_SetState(A, COLOR_RED, 1, 1);
+  LED_SetState(B, COLOR_RED, 1, 1);
+}
+
+static uint8_t    isp = 0;
 static inline int fillBuffer(uint8_t const which, uint8_t *buff, uint32_t len)
 {
-  ringbuffer_t *const p                 = &rb[which];
-  uint16_t const      savedBufHead      = p->bufHead;
-  uint16_t const      savedBufHeadIndex = p->bufHeadIndex;
-  if (which == A)
+  static uint8_t first    = 1;
+  static uint8_t ispArmed = 0;
+
+  if (first)
   {
-    if (!USBA_MIDI_IsConfigured())
+    first = 0;
+    isp   = ISP_isIspStart(buff, len);
+    if (isp)
     {
-      status[which].dataLoss = TIMEOUT_DATALOSS;  // indicate that we had to discard data
-      return 0;
-    }
-  }
-  else
-  {
-    if (!USBB_MIDI_IsConfigured())
-    {
-      status[which].dataLoss = TIMEOUT_DATALOSS;  // indicate that we had to discard data
-      return 0;
+      showIspStart();
+      return 1;
     }
   }
 
+  if (isp)
+  {
+    if (!ispArmed)
+    {
+      if (ISP_isIspEnd(buff, len))
+      {
+        ispArmed = 1;
+        showIspEnd();
+      }
+      else
+      {
+        ISP_FillData(buff, len);
+        showIspFill();
+      }
+    }
+    if (ispArmed && ISP_isIspExecute(buff, len))
+    {
+      showIspExecute();
+      isp = !ISP_Execute();
+    }
+    return 1;
+  }
+
+  // ------------
+
+  if (!status[which].initialized)
+  {
+    status[which].dataLoss = TIMEOUT_DATALOSS;  // indicate that we had to discard data
+    return 0;
+  }
+
+  ringbuffer_t *const p                 = &rb[which];
+  uint16_t const      savedBufHead      = p->bufHead;
+  uint16_t const      savedBufHeadIndex = p->bufHeadIndex;
+
   while (len)
   {
-    //  if (*buff < 0x80)
-    //    LED_SetState(which, (*buff & 0xF0) >> 4, (*buff) & 0x02, (*buff) & 0x01);
+#if LED_TEST != 0
+    if (*buff < 0x80)
+      LED_SetState(which, (*buff & 0xF0) >> 4, (*buff) & 0x02, (*buff) & 0x01);
+#endif
     if (p->bufHeadIndex >= BUFFER_SIZE)
     {  // current head is full, switch to next one
       uint16_t tmpBufHead = (p->bufHead + 1) & NUMBER_OF_BUFFERS_MASK;
@@ -130,8 +188,8 @@ void MIDI_PROXY_Init(void)
 #define pinUSBB_VBUS pinUSB1_VBUS
 #endif
 
-static uint8_t USBA_NotConnected = 3;
-static uint8_t USBB_NotConnected = 3;
+static uint8_t USBA_NoBuspower = 3;
+static uint8_t USBB_NoBuspower = 3;
 
 static inline uint32_t bytesToSend(uint8_t const which)
 {
@@ -151,7 +209,7 @@ static inline uint32_t MIDI_isConfigured(uint8_t const which)
 static inline void checkSends(uint8_t const which)
 {
   ringbuffer_t *const p = &rb[which];
-  if ((!MIDI_isConfigured(which)) || (p->bufHead == p->bufTail && p->bufHeadIndex == 0))
+  if ((!status[which].initialized) || (p->bufHead == p->bufTail && p->bufHeadIndex == 0))
     return;  // nothing to send
 
   if (bytesToSend(which))
@@ -183,7 +241,8 @@ static inline void checkSends(uint8_t const which)
 
 static void clearStatus(uint8_t const which)
 {
-  status[which].connected       = 2;
+  status[which].buspower        = 0;
+  status[which].initialized     = 0;
   status[which].buffering       = 0;
   status[which].dataLoss        = 0;
   status[which].lowLevelTraffic = 0;
@@ -192,16 +251,20 @@ static void clearStatus(uint8_t const which)
 
 static void processStatus(void)
 {
+  if (isp)
+    return;
   for (int port = 0; port < 2; port++)
   {
     uint8_t baseColor, bright, flickering;
     LED_GetState(port, &baseColor, &bright, &flickering);
 
-    if (!(status[port].connected & 1))
-      baseColor = COLOR_BLUE, bright = 0, flickering = 0;
+    if (status[port].buspower == 0)
+      baseColor = COLOR_OFF, bright = 0, flickering = 0;
     else
     {
-      if (status[port].dataLoss)
+      if (status[port].initialized == 0)
+        baseColor = COLOR_BLUE, bright = 1, flickering = 1;
+      else if (status[port].dataLoss)
         baseColor = COLOR_RED;
       else if (status[port].buffering)
         baseColor = COLOR_ORANGE;
@@ -215,9 +278,12 @@ static void processStatus(void)
       else
         bright = 0, flickering = 0;
     }
+#if LED_TEST == 0
     LED_SetState(port, baseColor, bright, flickering);
+#endif
 
-    status[port].connected = (status[port].connected << 1) & 3;
+    status[port].buspower    = 0;
+    status[port].initialized = 0;
     if (status[port].dataLoss)
       status[port].dataLoss--;
     if (status[port].buffering)
@@ -232,28 +298,30 @@ void MIDI_PROXY_ProcessFast(void)
 {
   if (!pinUSBA_VBUS)  // VBUS is off now
   {
-    if (USBA_NotConnected == 0)  // was on before ?
-    {                            // then turn USB off
+    if (USBA_NoBuspower == 0)  // was on before ?
+    {                          // then turn USB off
       USBA_MIDI_DeInit();
       USBB_MIDI_DeInit();
       ringbufferReset();
       clearStatus(A);
     }
-    USBA_NotConnected = 3;
+    USBA_NoBuspower = 3;
   }
   if (!pinUSBB_VBUS)  // VBUS is off now
   {
-    if (USBB_NotConnected == 0)  // was on before ?
-    {                            // then turn USB off
+    if (USBB_NoBuspower == 0)  // was on before ?
+    {                          // then turn USB off
       USBB_MIDI_DeInit();
       USBA_MIDI_DeInit();
       ringbufferReset();
       clearStatus(B);
     }
-    USBB_NotConnected = 3;
+    USBB_NoBuspower = 3;
   }
-  status[A].connected |= (!USBA_NotConnected);
-  status[B].connected |= (!USBB_NotConnected);
+  status[A].buspower    = !USBA_NoBuspower;
+  status[A].initialized = status[A].buspower && MIDI_isConfigured(A) && USBA_SetupComplete();
+  status[B].buspower    = !USBB_NoBuspower;
+  status[B].initialized = status[B].buspower && MIDI_isConfigured(B) && USBB_SetupComplete();
 
   checkSends(A);
   checkSends(B);
@@ -271,28 +339,27 @@ void MIDI_PROXY_Process(void)
 
   if (pinUSBA_VBUS)  // VBUS is on now
   {
-    if (USBA_NotConnected)  // still running plug-in time-out ?
+    if (USBA_NoBuspower)  // still running plug-in time-out ?
     {
-      if (!--USBA_NotConnected)  // time-out elapsed ?
-        armA = 1;                // arm turn-on trigger
+      if (!--USBA_NoBuspower)  // time-out elapsed ?
+        armA = 1;              // arm turn-on trigger
     }
   }
 
   if (pinUSBB_VBUS)  // VBUS is on now
   {
-    if (USBB_NotConnected)  // still running plug-in time-out ?
+    if (USBB_NoBuspower)  // still running plug-in time-out ?
     {
-      if (!--USBB_NotConnected)  // time-out elapsed ?
-        armB = 1;                // arm turn-on trigger
+      if (!--USBB_NoBuspower)  // time-out elapsed ?
+        armB = 1;              // arm turn-on trigger
     }
   }
 
-  armA = armA && !USBB_NotConnected;
-  armB = armB && !USBA_NotConnected;
+  armA = armA && !USBB_NoBuspower;
+  armB = armB && !USBA_NoBuspower;
 
   if (armA || armB)
   {
-    USB_MIDI_setStringDescriptorHash(0);  // TODO : get some true(!) random number
     USBA_MIDI_Init();
     USBB_MIDI_Init();
     clearStatus(A);
