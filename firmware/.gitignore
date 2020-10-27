@@ -5,6 +5,8 @@
 !src/main/.project
 !src/co-proc/.cproject
 !src/co-proc/.project
+!src/sysex-isp/.cproject
+!src/sysex-isp/.project
 
 # Blacklist files/folders
 .metadata/
@@ -14,6 +16,9 @@ src/main/Debug
 src/co-proc/.settings
 src/co-proc/Release
 src/co-proc/Debug
+src/sysex-isp/.settings
+src/sysex-isp/Release
+src/sysex-isp/Debug
 
 # Whitelist our folders we want to sync
 # trailing "/" is optional for folders, may match file though.
