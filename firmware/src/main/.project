@@ -51,6 +51,11 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>src/shared/midi</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>src/shared/sys</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
@@ -129,6 +134,16 @@
 			<name>src/shared/ipc/emphase_ipc.h</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/shared/ipc/emphase_ipc.h</locationURI>
+		</link>
+		<link>
+			<name>src/shared/midi/nl_sysex.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/midi/nl_sysex.c</locationURI>
+		</link>
+		<link>
+			<name>src/shared/midi/nl_sysex.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/midi/nl_sysex.h</locationURI>
 		</link>
 		<link>
 			<name>src/shared/sys/delays.h</name>
