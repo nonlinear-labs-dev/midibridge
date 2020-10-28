@@ -8,6 +8,8 @@
 #include "sys/globals.h"
 #include "drv/nl_leds.h"
 #include "midi/nl_midi_isp.h"
+#include "midi/nl_sysex.h"
+#include "sys/nl_version.h"
 
 #define BUFFER_SIZE            (1024)  // same size as low-level MIDI transfer buffers !!
 #define NUMBER_OF_BUFFERS      (8)     // number of buffers, must be 2^N !
@@ -80,8 +82,17 @@ static void showIspExecute(void)
   LED_SetState(B, COLOR_RED, 1, 1);
 }
 
+static inline int fillBuffer(uint8_t const which, uint8_t *buff, uint32_t len);
+
+static void sendInfo(uint8_t const which)
+{
+  uint8_t  buffer[sizeof VERSION_STRING_STRIPPED];
+  uint16_t len = MIDI_encodeRawSysex((uint8_t *) VERSION_STRING_STRIPPED, sizeof VERSION_STRING_STRIPPED, buffer);
+  fillBuffer(1 - which, buffer, len);
+}
+
 static uint8_t    isp = 0;
-static inline int fillBuffer(uint8_t const which, uint8_t *buff, uint32_t len)
+static inline int checkISP(uint8_t const which, uint8_t *buff, uint32_t len)
 {
   static uint8_t first    = 1;
   static uint8_t ispArmed = 0;
@@ -93,6 +104,12 @@ static inline int fillBuffer(uint8_t const which, uint8_t *buff, uint32_t len)
     if (isp)
     {
       showIspStart();
+      return 1;
+    }
+    if (ISP_isIspInfo(buff, len))
+    {  // send Info and re-arm for another IspStart thereafter
+      first = 0;
+      sendInfo(which);
       return 1;
     }
   }
@@ -120,7 +137,14 @@ static inline int fillBuffer(uint8_t const which, uint8_t *buff, uint32_t len)
     return 1;
   }
 
-  // ------------
+  return 0;
+}
+
+static inline int fillBuffer(uint8_t const which, uint8_t *buff, uint32_t len)
+{
+
+  if (checkISP(which, buff, len))
+    return 1;
 
   if (!status[which].initialized)
   {
