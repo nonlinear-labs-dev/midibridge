@@ -31,8 +31,10 @@ uint16_t MIDI_decodeSysex(uint8_t const* const src, uint32_t const len, uint8_t*
     if (i >= len)  // buffer ends before sysex tail was found ?
       return 0;
   }
+  i++;
   if (i != len)  // when there is more data than one single sysex this is an error, too
     return 0;
+
   return dest - savedDest;
 }
 
@@ -44,7 +46,7 @@ uint16_t MIDI_encodeSysex(uint8_t const* src, uint32_t len, uint8_t* const dest)
   uint8_t* topBits;
 
   // write start of sysex
-  dst[0] = 0xF0;
+  *(dst++) = 0xF0;
 
   while (len)
   {
