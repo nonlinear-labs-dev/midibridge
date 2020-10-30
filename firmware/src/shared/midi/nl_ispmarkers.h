@@ -11,4 +11,4 @@ extern const uint8_t ISP_EXECUTE_RAW[];
 extern const uint8_t ISP_INFO[];
 extern const uint8_t ISP_INFO_RAW[];
 
-uint16_t ISP_getMarkerSize(uint8_t const * const marker);
+uint16_t ISP_getMarkerSize(uint8_t const* const marker);

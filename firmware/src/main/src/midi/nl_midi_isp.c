@@ -1,45 +1,6 @@
 #include "midi/nl_midi_isp.h"
 #include "midi/nl_sysex.h"
-
-// clang-format off
-
-// "NLMBISPS"
-// sysex: f0 4e 4c 4d 42 49 53 50 53 f7
-static const uint8_t ISP_START[] = {
-  0x04, 0xF0, 'N', 'L',
-  0x04,  'M', 'B', 'I',
-  0x04,  'S', 'P', 'S',
-  0x05, 0xF7,  0,  0
-};
-
-// "NLMBISPE"
-// sysex: f0 4e 4c 4d 42 49 53 50 45 f7
-static const uint8_t ISP_END[] = {
-  0x04, 0xF0, 'N', 'L',
-  0x04,  'M', 'B', 'I',
-  0x04,  'S', 'P', 'E',
-  0x05, 0xF7, 0,   0
-};
-
-// "NLMBISPX"
-// sysex: f0 4e 4c 4d 42 49 53 50 58 f7
-static const uint8_t ISP_EXECUTE[] = {
-  0x04, 0xF0, 'N', 'L',
-  0x04,  'M', 'B', 'I',
-  0x04,  'S', 'P', 'X',
-  0x05, 0xF7, 0,   0
-};
-
-// "NLMBISPI"
-// sysex: f0 4e 4c 4d 42 49 53 50 49 f7
-static const uint8_t ISP_INFO[] = {
-  0x04, 0xF0, 'N', 'L',
-  0x04,  'M', 'B', 'I',
-  0x04,  'S', 'P', 'I',
-  0x05, 0xF7, 0,   0
-};
-
-// clang-format on
+#include "midi/nl_ispmarkers.h"
 
 typedef void (*downloadCode_t)(void);
 
@@ -58,22 +19,22 @@ static inline int memcmp(uint8_t const* const p, uint8_t const* const q, uint32_
 
 int ISP_isIspStart(uint8_t const* const buff, uint32_t const len)
 {
-  return memcmp(buff, ISP_START, len, sizeof ISP_START);
+  return memcmp(buff, ISP_START_RAW, len, ISP_getMarkerSize(ISP_START_RAW));
 }
 
 int ISP_isIspEnd(uint8_t const* const buff, uint32_t const len)
 {
-  return memcmp(buff, ISP_END, len, sizeof ISP_END);
+  return memcmp(buff, ISP_END_RAW, len, ISP_getMarkerSize(ISP_END_RAW));
 }
 
 int ISP_isIspExecute(uint8_t const* const buff, uint32_t const len)
 {
-  return memcmp(buff, ISP_EXECUTE, len, sizeof ISP_EXECUTE);
+  return memcmp(buff, ISP_EXECUTE_RAW, len, ISP_getMarkerSize(ISP_EXECUTE_RAW));
 }
 
 int ISP_isIspInfo(uint8_t const* const buff, uint32_t const len)
 {
-  return memcmp(buff, ISP_INFO, len, sizeof ISP_INFO);
+  return memcmp(buff, ISP_INFO_RAW, len, ISP_getMarkerSize(ISP_INFO_RAW));
 }
 
 static int error;

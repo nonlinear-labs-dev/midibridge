@@ -62,6 +62,14 @@ uint16_t ISP_getMarkerSize(uint8_t const* const marker)
     return sizeof ISP_EXECUTE;
   else if (marker == ISP_INFO)
     return sizeof ISP_INFO;
+  else if (marker == ISP_START_RAW)
+    return sizeof ISP_START_RAW;
+  else if (marker == ISP_END_RAW)
+    return sizeof ISP_END_RAW;
+  else if (marker == ISP_EXECUTE_RAW)
+    return sizeof ISP_EXECUTE_RAW;
+  else if (marker == ISP_INFO_RAW)
+    return sizeof ISP_INFO_RAW;
   else
     return 0;
 }

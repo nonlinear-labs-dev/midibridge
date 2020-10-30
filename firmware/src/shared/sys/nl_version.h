@@ -20,4 +20,4 @@
 #endif
 
 static const char VERSION_STRING[]          = "\n\nNLL MIDI Host-to-Host Bridge, LPC4337 Core " CORE ", FIRMWARE VERSION: " STR(SW_VERSION) " \n\n\0\0\0";
-static const char VERSION_STRING_STRIPPED[] = "NLL MIDI Host-to-Host Bridge, LPC4337 Core " CORE ", FIRMWARE VERSION: " STR(SW_VERSION);
+static const char VERSION_STRING_STRIPPED[] = "NLL MIDI Host-to-Host Bridge, Version: " STR(SW_VERSION);

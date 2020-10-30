@@ -99,16 +99,15 @@ static inline int checkISP(uint8_t const which, uint8_t *buff, uint32_t len)
 
   if (first)
   {
-    first = 0;
-    isp   = ISP_isIspStart(buff, len);
-    if (isp)
+    if (ISP_isIspStart(buff, len))
     {
+      first = 0;
+      isp   = 1;
       showIspStart();
       return 1;
     }
     if (ISP_isIspInfo(buff, len))
     {  // send Info and re-arm for another IspStart thereafter
-      first = 0;
       sendInfo(which);
       return 1;
     }
@@ -132,7 +131,7 @@ static inline int checkISP(uint8_t const which, uint8_t *buff, uint32_t len)
     if (ispArmed && ISP_isIspExecute(buff, len))
     {
       showIspExecute();
-      isp = !ISP_Execute();
+      isp = 1;  //!ISP_Execute();
     }
     return 1;
   }

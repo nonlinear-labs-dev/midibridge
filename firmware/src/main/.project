@@ -136,6 +136,16 @@
 			<locationURI>PARENT-1-PROJECT_LOC/shared/ipc/emphase_ipc.h</locationURI>
 		</link>
 		<link>
+			<name>src/shared/midi/nl_ispmarkers.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/midi/nl_ispmarkers.c</locationURI>
+		</link>
+		<link>
+			<name>src/shared/midi/nl_ispmarkers.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/midi/nl_ispmarkers.h</locationURI>
+		</link>
+		<link>
 			<name>src/shared/midi/nl_sysex.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/shared/midi/nl_sysex.c</locationURI>
