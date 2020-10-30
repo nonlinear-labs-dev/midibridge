@@ -2,17 +2,22 @@
 
 #include "io/pins.h"
 
-uint32_t max = 1000000;
-
 void ResetISR(void)
 {
+  int toggle = 1;
+
+  // __disable_irq();
   while (1)
   {
-    int32_t cntr = max;
+    uint32_t cntr = 1000000;
     while (cntr--)
-      ;
-    *pLED_RED0   = !*pLED_RED0;
-    *pLED_GREEN0 = !*pLED_GREEN0;
-    *pLED_BLUE0  = !*pLED_BLUE0;
+      asm volatile("nop");
+    toggle       = !toggle;
+    *pLED_RED0   = toggle;
+    *pLED_GREEN0 = toggle;
+    *pLED_BLUE0  = toggle;
+    *pLED_RED1   = toggle;
+    *pLED_GREEN1 = toggle;
+    *pLED_BLUE1  = toggle;
   }
 }

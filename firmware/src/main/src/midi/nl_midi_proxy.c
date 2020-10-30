@@ -130,8 +130,9 @@ static inline int checkISP(uint8_t const which, uint8_t *buff, uint32_t len)
     }
     if (ispArmed && ISP_isIspExecute(buff, len))
     {
-      showIspExecute();
-      isp = 1;  //!ISP_Execute();
+      if (ISP_Execute())
+        showIspExecute();
+      isp = 0;
     }
     return 1;
   }

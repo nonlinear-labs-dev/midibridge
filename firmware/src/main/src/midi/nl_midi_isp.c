@@ -2,10 +2,9 @@
 #include "midi/nl_sysex.h"
 #include "midi/nl_ispmarkers.h"
 
-typedef void (*downloadCode_t)(void);
-
-static downloadCode_t* execStart = (downloadCode_t*) 0x10000014;  // Pointer to RamLoc32 at 0x1000014, code entry
-static uint8_t*        code      = (uint8_t*) 0x10000000;         // Pointer to RamLoc32 at 0x1000000
+#define CODE_START (0x10000000)
+static uint8_t* codeStart = (uint8_t*) CODE_START;  // Pointer to RamLoc32 at 0x1000000
+static uint8_t* code      = (uint8_t*) CODE_START;
 
 static inline int memcmp(uint8_t const* const p, uint8_t const* const q, uint32_t const lenP, uint32_t const lenQ)
 {
@@ -55,6 +54,11 @@ int ISP_FillData(uint8_t const* const buff, uint32_t const len)
 
 int ISP_Execute(void)
 {
+  typedef void (*downloadCode_t)(void);
+  downloadCode_t execStart;
+  execStart = (downloadCode_t) 0x10000015;  // Pointer to RamLoc32 at 0x1000015, this code entry adr + 1 (!!!!)
+#warning "sketchy hardcoding here"
+
   if (error || !data)
     return 0;
   (*execStart)();
