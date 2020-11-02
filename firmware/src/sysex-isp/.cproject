@@ -29,7 +29,7 @@
 								</option>
 								<option id="gnu.c.compiler.option.misc.other.231291054" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -fno-builtin -ffunction-sections -fdata-sections" valueType="string"/>
 								<option id="gnu.c.compiler.option.optimization.flags.1041809624" name="Other optimization flags" superClass="gnu.c.compiler.option.optimization.flags" value="-fno-common" valueType="string"/>
-								<option id="com.crt.advproject.gcc.exe.release.option.optimization.level.1530270722" name="Optimization Level" superClass="com.crt.advproject.gcc.exe.release.option.optimization.level" value="gnu.c.optimization.level.most" valueType="enumerated"/>
+								<option id="com.crt.advproject.gcc.exe.release.option.optimization.level.1530270722" name="Optimization Level" superClass="com.crt.advproject.gcc.exe.release.option.optimization.level" value="gnu.c.optimization.level.none" valueType="enumerated"/>
 								<option id="com.crt.advproject.gcc.exe.release.option.debugging.level.930466716" name="Debug Level" superClass="com.crt.advproject.gcc.exe.release.option.debugging.level" value="gnu.c.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.warnings.extrawarn.2111119136" name="Extra warnings (-Wextra)" superClass="gnu.c.compiler.option.warnings.extrawarn" value="false" valueType="boolean"/>
 								<option id="com.crt.advproject.gcc.hdrlib.1774960771" name="Library headers" superClass="com.crt.advproject.gcc.hdrlib" value="com.crt.advproject.gcc.hdrlib.none" valueType="enumerated"/>
@@ -55,18 +55,19 @@
 								<option id="com.crt.advproject.link.gcc.multicore.master.userobjs.2008529786" name="Slave Objects (not visible)" superClass="com.crt.advproject.link.gcc.multicore.master.userobjs" valueType="userObjs"/>
 								<option id="com.crt.advproject.link.arch.2143087391" name="Architecture" superClass="com.crt.advproject.link.arch" value="com.crt.advproject.link.target.cm4" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.thumb.1085776119" name="Thumb mode" superClass="com.crt.advproject.link.thumb" value="true" valueType="boolean"/>
-								<option id="com.crt.advproject.link.script.469972293" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;sysex-isp_Release.ld&quot;" valueType="string"/>
-								<option id="com.crt.advproject.link.manage.1594613541" name="Manage linker script" superClass="com.crt.advproject.link.manage" value="true" valueType="boolean"/>
+								<option id="com.crt.advproject.link.script.469972293" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;sysex-isp.ld&quot;" valueType="string"/>
+								<option id="com.crt.advproject.link.manage.1594613541" name="Manage linker script" superClass="com.crt.advproject.link.manage" value="false" valueType="boolean"/>
 								<option id="gnu.c.link.option.nostdlibs.945975957" name="No startup or default libs (-nostdlib)" superClass="gnu.c.link.option.nostdlibs" value="true" valueType="boolean"/>
 								<option id="gnu.c.link.option.other.934851959" name="Other options (-Xlinker [option])" superClass="gnu.c.link.option.other" valueType="stringList">
 									<listOptionValue builtIn="false" value="-Map=&quot;${BuildArtifactFileBaseName}.map&quot;"/>
 									<listOptionValue builtIn="false" value="--gc-sections"/>
 									<listOptionValue builtIn="false" value="-print-memory-usage"/>
 								</option>
-								<option id="com.crt.advproject.link.gcc.hdrlib.1378082599" name="Library" superClass="com.crt.advproject.link.gcc.hdrlib" value="com.crt.advproject.gcc.link.hdrlib.newlib.none" valueType="enumerated"/>
+								<option id="com.crt.advproject.link.gcc.hdrlib.1378082599" name="Library" superClass="com.crt.advproject.link.gcc.hdrlib" value="com.crt.advproject.gcc.link.hdrlib.none" valueType="enumerated"/>
 								<option id="gnu.c.link.option.nostart.840319911" name="Do not use standard start files (-nostartfiles)" superClass="gnu.c.link.option.nostart" value="true" valueType="boolean"/>
 								<option id="gnu.c.link.option.nodeflibs.323449130" name="Do not use default libraries (-nodefaultlibs)" superClass="gnu.c.link.option.nodeflibs" value="true" valueType="boolean"/>
 								<option id="com.crt.advproject.link.gcc.multicore.slave.1558326497" name="Multicore configuration" superClass="com.crt.advproject.link.gcc.multicore.slave"/>
+								<option id="com.crt.advproject.link.scriptdir.1332162010" name="Script path" superClass="com.crt.advproject.link.scriptdir" value="&quot;../../../ld&quot;" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1869685579" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
