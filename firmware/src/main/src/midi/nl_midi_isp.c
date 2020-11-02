@@ -56,8 +56,9 @@ int ISP_Execute(void)
 {
   typedef void (*downloadCode_t)(void);
   downloadCode_t execStart;
-  execStart = (downloadCode_t) 0x10000015;  // Pointer to RamLoc32 at 0x1000015, this code entry adr + 1 (!!!!)
-#warning "sketchy hardcoding here"
+
+#warning sketchy hardcoding here, TODO : replace with symbol from linker script
+  execStart = (downloadCode_t) 0x10000001;  // Pointer to RamLoc32 at 0x1000000, this is code entry adr + 1 (!!!!)
 
   if (error || !data)
     return 0;
