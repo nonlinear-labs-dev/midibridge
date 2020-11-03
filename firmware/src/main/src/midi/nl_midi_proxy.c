@@ -99,7 +99,6 @@ static inline int checkISP(uint8_t const which, uint8_t *buff, uint32_t len)
 
   if (first)
   {
-#warning TODO : decode raw USB MIDI in plain MIDI first (restricted to Sysex Messages at least)
     if (ISP_isIspStart(buff, len))
     {
       first = 0;
@@ -118,7 +117,6 @@ static inline int checkISP(uint8_t const which, uint8_t *buff, uint32_t len)
   {
     if (!ispArmed)
     {
-#warning TODO : decode raw USB MIDI in plain MIDI first (restricted to Sysex Messages at least)
       if (ISP_isIspEnd(buff, len))
       {
         ispArmed = 1;
@@ -126,7 +124,6 @@ static inline int checkISP(uint8_t const which, uint8_t *buff, uint32_t len)
       }
       else
       {
-#warning TODO : check for ISP_DATA_RAW marker (and discard it)
         ISP_FillData(buff, len);
         showIspFill();
       }
@@ -135,7 +132,6 @@ static inline int checkISP(uint8_t const which, uint8_t *buff, uint32_t len)
     {
       if (ISP_isIspExecute(buff, len))
       {
-#warning TODO : decode raw USB MIDI in plain MIDI first (restricted to Sysex Messages at least)
         if (ISP_Execute())
           showIspExecute();
         isp = 0;
