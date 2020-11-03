@@ -60,23 +60,29 @@ static void ringbufferReset(void)
 
 static void showIspStart(void)
 {
-  LED_SetState(A, COLOR_BLUE, 1, 1);
-  LED_SetState(B, COLOR_BLUE, 1, 1);
+  LED_SetState(A, COLOR_BLUE, 0, 1);
+  LED_SetState(B, COLOR_BLUE, 0, 1);
 }
 
 static void showIspEnd(void)
 {
-  LED_SetState(A, COLOR_GREEN, 1, 1);
-  LED_SetState(B, COLOR_GREEN, 1, 1);
+  LED_SetState(A, COLOR_GREEN, 0, 1);
+  LED_SetState(B, COLOR_GREEN, 0, 1);
 }
 
 static void showIspFill(void)
 {
-  LED_SetState(A, COLOR_ORANGE, 1, 1);
-  LED_SetState(B, COLOR_ORANGE, 1, 1);
+  LED_SetState(A, COLOR_ORANGE, 0, 1);
+  LED_SetState(B, COLOR_ORANGE, 0, 1);
 }
 
 static void showIspExecute(void)
+{
+  LED_SetState(A, COLOR_RED, 0, 1);
+  LED_SetState(B, COLOR_RED, 0, 1);
+}
+
+static void showIspError(void)
 {
   LED_SetState(A, COLOR_RED, 1, 1);
   LED_SetState(B, COLOR_RED, 1, 1);
@@ -124,8 +130,10 @@ static inline int checkISP(uint8_t const which, uint8_t *buff, uint32_t len)
       }
       else
       {
-        ISP_FillData(buff, len);
-        showIspFill();
+        if (ISP_FillData(buff, len))
+          showIspFill();
+        else
+          showIspError();
       }
     }
     if (ispArmed)
