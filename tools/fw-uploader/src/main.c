@@ -68,7 +68,8 @@ static void midiSend(snd_rawmidi_t *const handle, uint8_t const *const data, siz
   if (res = snd_rawmidi_write(handle, data, numBytes))
   {
     if ((size_t) res != numBytes)
-      usage("midiSend: could not write message into MIDI output device!", 3);
+      usage("midiSend: could not write message to MIDI output device!", 3);
+    snd_rawmidi_drain(handle);
   }
 }
 
@@ -96,8 +97,10 @@ int main(int argc, char *argv[])
 
   snd_rawmidi_t *midiOut;
   snd_rawmidi_t *midiIn;
-  if (snd_rawmidi_open(&midiIn, &midiOut, argv[1], SND_RAWMIDI_SYNC))
-    usage("Could not open MIDI device!", 3);
+  if (snd_rawmidi_open(&midiIn, NULL, argv[1], SND_RAWMIDI_SYNC))
+    usage("Could not open MIDI input device!", 3);
+  if (snd_rawmidi_open(NULL, &midiOut, argv[1], SND_RAWMIDI_SYNC))
+    usage("Could not open MIDI output device!", 3);
 
   FILE *imageFile;
   if (NULL == (imageFile = fopen(argv[2], "rb")))
@@ -109,11 +112,12 @@ int main(int argc, char *argv[])
 
   //
   // write ISP_INFO message to device
-  midiSend(midiOut, ISP_INFO, ISP_getMarkerSize(ISP_INFO));
+  midiSend(midiOut, ISP_INFO, sizeof ISP_INFO);
   // read response
   puts("reading firmware version string... (press CTRL-C if response does not show immediately)");
   char     versionString[200];
   uint16_t versionStringSize = receiveAndDecode(midiIn, versionString, sizeof versionString);
+  snd_rawmidi_close(midiIn);
   if (versionStringSize > 1)
     printf(" current firmware is '%s'\n", versionString);
 
@@ -127,7 +131,7 @@ int main(int argc, char *argv[])
 
   //
   // write ISP_START message to device
-  midiSend(midiOut, ISP_START, ISP_getMarkerSize(ISP_START));
+  midiSend(midiOut, ISP_START, sizeof ISP_START);
 
   //
   // write ISP_END message to device
@@ -141,18 +145,17 @@ int main(int argc, char *argv[])
   }
   if (encodeAndSend(midiOut, fileBuffer, bytes, sysexBuffer))
     total += bytes;
+  fclose(imageFile);
 
   //
   // write ISP_END message to device
-  midiSend(midiOut, ISP_END, ISP_getMarkerSize(ISP_END));
+  midiSend(midiOut, ISP_END, sizeof ISP_END);
   printf(" %lu total bytes transferred to MIDI device.\n", total);
 
   // write ISP_EXECUTE message to device
   puts("flashing new firmware...");
-  midiSend(midiOut, ISP_EXECUTE, ISP_getMarkerSize(ISP_EXECUTE));
+  midiSend(midiOut, ISP_EXECUTE, sizeof ISP_EXECUTE);
 
   puts("done");
-  fclose(imageFile);
-  snd_rawmidi_close(midiOut);
   return 0;
 }
