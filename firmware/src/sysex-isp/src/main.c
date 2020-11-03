@@ -11,7 +11,7 @@ int b = 3;
 
 __attribute__((section(".codeentry"))) int main(void)
 {
-  uint16_t len =  sizeof ISP_INFO_RAW;
+  uint16_t len = sizeof ISP_INFO_RAW;
   uint8_t  buffer[len];
   for (int i; i < len; i++)
     buffer[i] = ISP_INFO_RAW[i];
@@ -23,8 +23,8 @@ __attribute__((section(".codeentry"))) int main(void)
   NOP;
 
 #if 01
-  static int MAX = 1000000;
-  int toggle = 1;
+  static int MAX    = 1000000;
+  int        toggle = 1;
 
   // __disable_irq();
   while (1)
