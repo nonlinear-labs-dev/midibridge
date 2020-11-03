@@ -35,7 +35,7 @@ static const uint8_t ISP_END_RAW[] = {
   0x04, 0xF0, MMID0, MMID1,
   0x04, MMID2, 'M', 'B',
   0x04, 'I', 'S', 'P',
-  0x06, 'X', 0xF7, 0
+  0x06, 'E', 0xF7, 0
 };
 
 // "NLMBISPX"
@@ -59,5 +59,5 @@ static const uint8_t ISP_INFO_RAW[] = {
   0x04, 0xF0, MMID0, MMID1,
   0x04, MMID2, 'M', 'B',
   0x04, 'I', 'S', 'P',
-  0x06, 'X', 0xF7, 0
+  0x06, 'I', 0xF7, 0
 };
