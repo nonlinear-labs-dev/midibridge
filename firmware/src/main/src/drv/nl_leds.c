@@ -26,6 +26,17 @@
 #define pLED_BLUEb  (pLED_BLUE1)
 #endif
 
+void LED_SetDirectAndHalt(uint8_t const rgb)
+{
+  *pLED_RED0 = *pLED_RED1 = !(rgb & 0b001);
+  *pLED_GREEN0 = *pLED_GREEN1 = !(rgb & 0b010);
+  *pLED_BLUE0 = *pLED_BLUE1 = !(rgb & 0b100);
+
+  __disable_irq();
+  while (1)
+    ;
+}
+
 typedef struct __attribute__((__packed__))
 {
   uint8_t r;

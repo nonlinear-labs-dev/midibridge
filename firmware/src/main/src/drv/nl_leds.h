@@ -15,6 +15,7 @@ enum BASE_COLORS
   COLOR_RED    = 4,
 };
 
+void LED_SetDirectAndHalt(uint8_t const rgb);
 void LED_SetState(uint8_t const ledId, uint8_t const baseColor, uint8_t const bright, uint8_t const flickering);
 void LED_GetState(uint8_t const ledId, uint8_t* const baseColor, uint8_t* const bright, uint8_t* const flickering);
 void LED_SetColor(uint8_t const ledId, uint8_t const color);
