@@ -58,36 +58,6 @@ static void ringbufferReset(void)
   }
 }
 
-static void showIspStart(void)
-{
-  LED_SetState(A, COLOR_BLUE, 0, 1);
-  LED_SetState(B, COLOR_BLUE, 0, 1);
-}
-
-static void showIspEnd(void)
-{
-  LED_SetState(A, COLOR_GREEN, 0, 1);
-  LED_SetState(B, COLOR_GREEN, 0, 1);
-}
-
-static void showIspFill(void)
-{
-  LED_SetState(A, COLOR_ORANGE, 0, 1);
-  LED_SetState(B, COLOR_ORANGE, 0, 1);
-}
-
-static void showIspExecute(void)
-{
-  LED_SetState(A, COLOR_RED, 0, 1);
-  LED_SetState(B, COLOR_RED, 0, 1);
-}
-
-static void showIspError(void)
-{
-  LED_SetState(A, COLOR_RED, 1, 1);
-  LED_SetState(B, COLOR_RED, 1, 1);
-}
-
 static inline int fillBuffer(uint8_t const which, uint8_t *buff, uint32_t len);
 
 static void sendInfo(uint8_t const which)
@@ -97,65 +67,8 @@ static void sendInfo(uint8_t const which)
   fillBuffer(1 - which, buffer, len);
 }
 
-static uint8_t    isp = 0;
-static inline int checkISP(uint8_t const which, uint8_t *buff, uint32_t len)
-{
-  static uint8_t first    = 1;
-  static uint8_t ispArmed = 0;
-
-  if (first)
-  {
-    if (ISP_isIspStart(buff, len))
-    {
-      first = 0;
-      isp   = 1;
-      showIspStart();
-      return 1;
-    }
-    if (ISP_isIspInfo(buff, len))
-    {  // send Info and re-arm for another IspStart thereafter
-      sendInfo(which);
-      return 1;
-    }
-  }
-
-  if (isp)
-  {
-    if (!ispArmed)
-    {
-      if (ISP_isIspEnd(buff, len))
-      {
-        ispArmed = 1;
-        showIspEnd();
-      }
-      else
-      {
-        if (ISP_FillData(buff, len))
-          showIspFill();
-        else
-          showIspError();
-      }
-    }
-    if (ispArmed)
-    {
-      if (ISP_isIspExecute(buff, len))
-      {
-        if (ISP_Execute())
-          showIspExecute();
-        isp = 0;
-      }
-    }
-    return 1;
-  }
-
-  return 0;
-}
-
 static inline int fillBuffer(uint8_t const which, uint8_t *buff, uint32_t len)
 {
-
-  if (checkISP(which, buff, len))
-    return 1;
 
   if (!status[which].initialized)
   {
@@ -193,20 +106,52 @@ static inline int fillBuffer(uint8_t const which, uint8_t *buff, uint32_t len)
   return 1;
 }
 
-static inline void ReceiveA(uint8_t *buff, uint32_t len)
+// ------------------------------------------------------------
+
+static uint8_t inCommandMode;
+static uint8_t commandModeChannel;
+
+// return != 0 when in command mode and message shall be discarded by caller
+static inline int processCommand(uint8_t const which, uint8_t *const buff, uint32_t const len)
 {
-  fillBuffer(B, buff, len);
+  static uint8_t first = 1;
+
+  if (!inCommandMode)
+  {
+    if (first)  // only check for command ID on first received message ever
+    {
+      if (ISP_isOurCommand(buff, len))
+      {  // OK, a NLL MIDI-Bridge command was found
+        inCommandMode      = 1;
+        commandModeChannel = which;
+      }
+    }
+  }
+  first = 0;
+
+  if (inCommandMode && (which == commandModeChannel))
+  {                                                           // collect commands only from one and the same port
+    inCommandMode = ISP_collectAndExecuteCommand(buff, len);  // may terminate command mode
+    return 1;                                                 // but the command itself must be discarded
+  }
+  return 0;  // regular transfer
+}
+static inline void ReceiveACallback(uint8_t *buff, uint32_t len)
+{
+  if (processCommand(A, buff, len) == 0)
+    fillBuffer(B, buff, len);
 }
 
-static inline void ReceiveB(uint8_t *buff, uint32_t len)
+static inline void ReceiveBCallback(uint8_t *buff, uint32_t len)
 {
-  fillBuffer(A, buff, len);
+  if (processCommand(B, buff, len) == 0)
+    fillBuffer(A, buff, len);
 }
 
 void MIDI_PROXY_Init(void)
 {
-  USBA_MIDI_Config(ReceiveA);
-  USBB_MIDI_Config(ReceiveB);
+  USBA_MIDI_Config(ReceiveACallback);
+  USBB_MIDI_Config(ReceiveBCallback);
 }
 
 // ------------------------------------------------------------------
@@ -286,8 +231,6 @@ static void clearStatus(uint8_t const which)
 
 static void processStatus(void)
 {
-  if (isp)
-    return;
   for (int port = 0; port < 2; port++)
   {
     uint8_t baseColor, bright, flickering;
@@ -369,6 +312,9 @@ void MIDI_PROXY_ProcessFast(void)
 
 void MIDI_PROXY_Process(void)
 {
+  if (inCommandMode)
+    return;
+
   uint8_t armA = 0;
   uint8_t armB = 0;
 
