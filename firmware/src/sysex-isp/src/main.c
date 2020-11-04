@@ -11,10 +11,10 @@ int b = 3;
 
 __attribute__((section(".codeentry"))) int main(void)
 {
-  uint16_t len = sizeof ISP_INFO_RAW;
+  uint16_t len = sizeof NLMB_ManuID_RAW;
   uint8_t  buffer[len];
   for (int i; i < len; i++)
-    buffer[i] = ISP_INFO_RAW[i];
+    buffer[i] = NLMB_ManuID_RAW[i];
   *pLED_BLUE0 = buffer[0] + a + b;
   NOP;
   NOP;
