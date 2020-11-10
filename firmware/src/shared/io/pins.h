@@ -6,9 +6,9 @@
 // clang-format off
 
 //
-// --------------- debug pins and LEDs ----------------
+// --------------- LEDs ----------------
 //
-// LEDs (those are active-low!)
+// System RGB-LEDs (those are active-low!)
 #define LED_A_init() GPIO_DIR_OUT(0, 15); SFSP(1, 20) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0
 #define LED_A          pGPIO_Word(0, 15)
 #define LED_B_init() GPIO_DIR_OUT(0, 12); SFSP(1, 17) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0
@@ -31,6 +31,16 @@
 #define pLED_GREEN1  LED_E
 #define pLED_BLUE1   LED_F
 
+//
+// Debug-LEDs (those are active-high)
+#define LED_DBG1_init() GPIO_DIR_OUT(2, 0); SFSP(4, 0) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0
+#define LED_DBG1           GPIO_Word(2, 0)
+#define LED_DBG2_init() GPIO_DIR_OUT(2, 3); SFSP(4, 3) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0
+#define LED_DBG2           GPIO_Word(2, 3)
+#define LED_DBG3_init() GPIO_DIR_OUT(2, 6); SFSP(4, 4) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0
+#define LED_DBG3           GPIO_Word(2, 6)
+
+
 static inline void debugPinsInit(void)
 {
   LED_A_init();
@@ -45,6 +55,13 @@ static inline void debugPinsInit(void)
   *LED_D = 0;
   *LED_E = 0;
   *LED_F = 0;
+
+  LED_DBG1_init();
+  LED_DBG2_init();
+  LED_DBG3_init();
+  LED_DBG1 = 0;
+  LED_DBG2 = 0;
+  LED_DBG3 = 0;
 }
 
 
