@@ -30,30 +30,26 @@
     @author		Nemanja Nikodijevic [2014-12-11]
 
 *******************************************************************************/
-#include "usb/nl_usba_midi.h"
+#include "usb/nl_usb_midi.h"
 #include "usb/nl_usb_descmidi.h"
-#include "usb/nl_usba_core.h"
+#include "usb/nl_usb_core.h"
 #include "sys/globals.h"
+#include "io/pins.h"
 
-static uint32_t endOfBuffer = 0;
+typedef struct
+{
+  uint32_t        endOfBuffer;
+  MidiRcvCallback MIDI_RcvCallback;
+  uint8_t         dropMessages;
+} UsbMidi_t;
 
-static uint8_t  midiBuffer[2][USB_MIDI_BUFFER_SIZE];
-static uint8_t  activeBuffer = 0;
-static uint32_t midiBuffPosition[2];
-
-static MidiRcvCallback USB_MIDI_RcvCallback = 0;
-
-#ifndef __NO_USB_MIDI__
-static uint8_t midiDropMessages = 0;
-#else
-static uint8_t midiDropMessages = 1;
-#endif
+static UsbMidi_t usbMidi[2];
 
 /******************************************************************************/
 /** @brief		Endpoint 1 Callback
     @param[in]	event	Event that triggered the interrupt
 *******************************************************************************/
-static void USBA_EndPoint1(uint32_t event)
+static void EndPoint1(uint8_t const port, uint32_t const event)
 {
   static uint8_t outbuff[512];
   uint32_t       length;
@@ -61,11 +57,11 @@ static void USBA_EndPoint1(uint32_t event)
   switch (event)
   {
     case USB_EVT_OUT:
-      length = USBA_ReadEP(0x01, outbuff);
-      if (USB_MIDI_RcvCallback)
-        USB_MIDI_RcvCallback(outbuff, length);
+      length = USB_ReadEP(port, 0x01, outbuff);
+      if (usbMidi[port].MIDI_RcvCallback)
+        usbMidi[port].MIDI_RcvCallback(port, outbuff, length);
     case USB_EVT_OUT_NAK:
-      USBA_ReadReqEP(0x01, outbuff, 512);
+      USB_ReadReqEP(port, 0x01, outbuff, 512);
       break;
   }
 }
@@ -74,14 +70,17 @@ static void USBA_EndPoint1(uint32_t event)
 /** @brief		Endpoint 2 Callback
     @param[in]	event	Event that triggered the interrupt
 *******************************************************************************/
-static void USBA_EndPoint2(uint32_t event)
+static void EndPoint2(uint8_t const port, uint32_t const event)
 {
 
   switch (event)
   {
     case USB_EVT_IN_NAK:
-    case USB_EVT_IN:
-      USBA_MIDI_CheckBuffer();
+    case USB_EVT_IN:  // end of write out
+      if (port == 0)
+        LED_DBG1 = 0;
+      else
+        LED_DBG2 = 0;
       break;
   }
 }
@@ -89,23 +88,23 @@ static void USBA_EndPoint2(uint32_t event)
 /******************************************************************************/
 /** @brief    Function that initializes USB MIDI driver for USB0 controller
 *******************************************************************************/
-void USBA_MIDI_Init(void)
+void USB_MIDI_Init(uint8_t const port)
 {
   /** assign descriptors */
-  USBA_Core_Device_Descriptor_Set((const uint8_t *) USB_MIDI_DeviceDescriptor);
-  USBA_Core_Device_FS_Descriptor_Set((const uint8_t *) USB_MIDI_FSConfigDescriptor);
-  USBA_Core_Device_HS_Descriptor_Set((const uint8_t *) USB_MIDI_HSConfigDescriptor);
-  USBA_Core_Device_String_Descriptor_Set((const uint8_t *) USBA_MIDI_StringDescriptor);
-  USBA_Core_Device_Device_Quali_Descriptor_Set((const uint8_t *) USB_MIDI_DeviceQualifier);
+  USB_Core_Device_Descriptor_Set(port, (const uint8_t *) USB_MIDI_DeviceDescriptor);
+  USB_Core_Device_FS_Descriptor_Set(port, (const uint8_t *) USB_MIDI_FSConfigDescriptor);
+  USB_Core_Device_HS_Descriptor_Set(port, (const uint8_t *) USB_MIDI_HSConfigDescriptor);
+  USB_Core_Device_String_Descriptor_Set(port, (const uint8_t *) (port == 0) ? USB0_MIDI_StringDescriptor : USB1_MIDI_StringDescriptor);
+  USB_Core_Device_Device_Quali_Descriptor_Set(port, (const uint8_t *) USB_MIDI_DeviceQualifier);
   /** assign callbacks */
-  USBA_Core_Endpoint_Callback_Set(1, USBA_EndPoint1);
-  USBA_Core_Endpoint_Callback_Set(2, USBA_EndPoint2);
-  USBA_Core_Init();
+  USB_Core_Endpoint_Callback_Set(port, 1, EndPoint1);
+  USB_Core_Endpoint_Callback_Set(port, 2, EndPoint2);
+  USB_Core_Init(port);
 }
 
-void USBA_MIDI_DeInit(void)
+void USB_MIDI_DeInit(uint8_t const port)
 {
-  USBA_Core_DeInit();
+  USB_Core_DeInit(port);
 }
 
 /******************************************************************************/
@@ -113,30 +112,29 @@ void USBA_MIDI_DeInit(void)
  *  @param[in]	midircv		Pointer to the callback function for
  *  						the MIDI received data
 *******************************************************************************/
-void USBA_MIDI_Config(MidiRcvCallback midircv)
+void USB_MIDI_Config(uint8_t const port, MidiRcvCallback midircv)
 {
-  USB_MIDI_RcvCallback = midircv;
+  usbMidi[port].MIDI_RcvCallback = midircv;
 }
 
 /******************************************************************************/
 /** @brief    Function that polls USB MIDI driver
 *******************************************************************************/
-void USBA_MIDI_Poll(void)
+void USB_MIDI_Poll(uint8_t const port)
 {
-#if USBA_PORT_FOR_MIDI == 0
-  USB0_IRQHandler();
-#else
-  USB1_IRQHandler();
-#endif
+  if (port == 0)
+    USB0_IRQHandler();
+  else
+    USB1_IRQHandler();
 }
 
 /******************************************************************************/
 /** @brief		Checks whether the USB-MIDI is connected and configured
     @return		1 - Success ; 0 - Failure
 *******************************************************************************/
-uint32_t USBA_MIDI_IsConfigured(void)
+uint32_t USB_MIDI_IsConfigured(uint8_t const port)
 {
-  return USBA_Core_IsConfigured();
+  return USB_Core_IsConfigured(port);
 }
 
 /******************************************************************************/
@@ -146,85 +144,41 @@ uint32_t USBA_MIDI_IsConfigured(void)
     @param[in]	imm		Immediate only
     @return		Number of bytes written - Success ; 0 - Failure
 *******************************************************************************/
-uint32_t USBA_MIDI_Send(uint8_t const *const buff, uint32_t const cnt, uint8_t const imm)
+uint32_t USB_MIDI_Send(uint8_t const port, uint8_t const *const buff, uint32_t const cnt)
 {
 
-  if (midiDropMessages)
-  {
+  if (usbMidi[port].dropMessages)
     return 0;
-  }
 
-  if (USBA_Core_ReadyToWrite(0x82))
+  if (USB_Core_ReadyToWrite(port, 0x82))
   {
-    USBA_WriteEP(0x82, (uint8_t *) buff, (uint32_t) cnt);
-    endOfBuffer = (uint32_t) buff + cnt;
+    if (port == 0)
+      LED_DBG1 = 1;
+    else
+      LED_DBG2 = 1;
+    USB_WriteEP(port, 0x82, (uint8_t *) buff, (uint32_t) cnt);
+    usbMidi[port].endOfBuffer = (uint32_t) buff + cnt;
     return cnt;
   }
-  else if (!imm)
-  {
-    return USBA_MIDI_SendDelayed((uint8_t *) buff, (uint32_t) cnt);
-  }
   return 0;
-}
-
-/******************************************************************************/
-/** @brief		Write the data into buffer for delayed transfer
-    @param[in]	buff	Pointer to data buffer
-    @param[in]	cnt		Amount of bytes to send
-    @return		Number of bytes written - Success ; 0 - Failure
-*******************************************************************************/
-uint32_t USBA_MIDI_SendDelayed(uint8_t *buff, uint32_t cnt)
-{
-  uint32_t i = 0;
-  if (midiDropMessages)
-  {
-    return 0;
-  }
-  while ((midiBuffPosition[activeBuffer] < USB_MIDI_BUFFER_SIZE) && (i < cnt))
-  {
-    midiBuffer[activeBuffer][midiBuffPosition[activeBuffer]] = buff[i];
-    i++;
-    midiBuffPosition[activeBuffer]++;
-  }
-  return i;
-}
-
-/******************************************************************************/
-/** @brief		Send out the current buffer
- 	@return		1 - Success; 0 - Failure
-*******************************************************************************/
-uint32_t USBA_MIDI_CheckBuffer(void)
-{
-  if (midiBuffPosition[activeBuffer] && USBA_Core_ReadyToWrite(0x82))
-  {
-    USBA_WriteEP(0x82, midiBuffer[activeBuffer], midiBuffPosition[activeBuffer]);
-    endOfBuffer                    = (uint32_t) midiBuffer[activeBuffer] + midiBuffPosition[activeBuffer];
-    midiBuffPosition[activeBuffer] = 0;
-    activeBuffer                   = activeBuffer ? 0 : 1;
-    return 1;
-  }
-  else
-    return 0;
 }
 
 /******************************************************************************/
 /** @brief		Get the amount of bytes left to be sent
     @return		Amount of bytes to be sent from the buffer
 *******************************************************************************/
-uint32_t USBA_MIDI_BytesToSend(void)
+int32_t USB_MIDI_BytesToSend(uint8_t const port)
 {
-  return USBA_Core_BytesToSend(endOfBuffer, 0x82);
+  return USB_Core_BytesToSend(port, usbMidi[port].endOfBuffer, 0x82);
 }
 
 /******************************************************************************/
 /** @brief		Drop all messages written to the interface
     @param[in]	drop	1 - drop future messages; 0 - do not drop future msgs
 *******************************************************************************/
-void USBA_MIDI_DropMessages(uint8_t drop)
+void USB_MIDI_DropMessages(uint8_t const port, uint8_t drop)
 {
-#ifndef __NO_USB_MIDI__
-  midiDropMessages = drop;
-#endif
+  usbMidi[port].dropMessages = drop;
 }
 
 // EOF

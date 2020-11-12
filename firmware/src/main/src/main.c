@@ -16,9 +16,8 @@
 #include "drv/nl_leds.h"
 #include "drv/nl_cgu.h"
 #include "io/pins.h"
-#include "usb/nl_usba_midi.h"
-#include "usb/nl_usbb_midi.h"
-#include "midi/nl_midi_proxy.h"
+#include "usb/nl_usb_midi.h"
+#include "midi/MIDI_relay.h"
 #include "sys/nl_version.h"
 
 #define DBG_CLOCK_MONITOR (0)
@@ -59,8 +58,8 @@ void Init(void)
   /* LEDs */
   LED_Init();
 
-  /* MIDI Proxy */
-  MIDI_PROXY_Init();
+  /* MIDI relay */
+  MIDI_Relay_Init();
 
   /* scheduler */
   COOS_Init();
@@ -70,7 +69,7 @@ void Init(void)
   COOS_Task_Add(LED_ProcessPWM,    1, 2);  // every 250 us  // PWM-LEDs
 
 #define TS (10)                                            // 1.25 ms time slice
-  COOS_Task_Add(MIDI_PROXY_Process, 1 * TS + 2, 40 * TS);  // every 50 ms
+  COOS_Task_Add(MIDI_Relay_Process, 1 * TS + 2, 40 * TS);  // every 50 ms
   COOS_Task_Add(LED_Process,        2 * TS + 3, 20 * TS);  // every 25 ms
   // clang-format on
 
@@ -95,9 +94,9 @@ void main(void)
 
   while (1)
   {
-    MIDI_PROXY_ProcessFast();
-    USBA_MIDI_Poll();  // Send/receive MIDI data, may do callbacks
-    USBB_MIDI_Poll();  // Send/receive MIDI data, may do callbacks
+    MIDI_Relay_ProcessFast();
+    USB_MIDI_Poll(0);  // Send/receive MIDI data, may do callbacks
+    USB_MIDI_Poll(1);  // Send/receive MIDI data, may do callbacks
     COOS_Dispatch();   // Standard dispatching of the slower stuff
   }
 }

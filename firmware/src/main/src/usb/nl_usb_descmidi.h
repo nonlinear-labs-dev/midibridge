@@ -109,6 +109,6 @@
 extern const uint8_t USB_MIDI_DeviceDescriptor[];
 extern const uint8_t USB_MIDI_FSConfigDescriptor[];
 extern const uint8_t USB_MIDI_HSConfigDescriptor[];
-extern uint8_t       USBA_MIDI_StringDescriptor[];
-extern uint8_t       USBB_MIDI_StringDescriptor[];
+extern const uint8_t USB0_MIDI_StringDescriptor[];
+extern const uint8_t USB1_MIDI_StringDescriptor[];
 extern const uint8_t USB_MIDI_DeviceQualifier[];

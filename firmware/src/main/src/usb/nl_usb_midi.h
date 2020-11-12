@@ -18,17 +18,15 @@
 /** @} */
 
 /* Definition for Midi Receive Callback function */
-typedef void (*MidiRcvCallback)(uint8_t* buff, uint32_t len);
+typedef void (*MidiRcvCallback)(uint8_t const port, uint8_t* buff, uint32_t len);
 
 /* USB MIDI functions */
-void USBA_MIDI_Init(void);
-void USBA_MIDI_DeInit(void);
-void USBA_MIDI_Config(MidiRcvCallback midircv);
-void USBA_MIDI_Poll(void);
+void USB_MIDI_Init(uint8_t const port);
+void USB_MIDI_DeInit(uint8_t const port);
+void USB_MIDI_Config(uint8_t const port, MidiRcvCallback midircv);
+void USB_MIDI_Poll(uint8_t const port);
 
-uint32_t USBA_MIDI_IsConfigured(void);
-uint32_t USBA_MIDI_Send(uint8_t const* const buff, uint32_t const cnt, uint8_t const imm);
-uint32_t USBA_MIDI_SendDelayed(uint8_t* buff, uint32_t cnt);
-uint32_t USBA_MIDI_CheckBuffer(void);
-uint32_t USBA_MIDI_BytesToSend(void);
-void     USBA_MIDI_DropMessages(uint8_t drop);
+uint32_t USB_MIDI_IsConfigured(uint8_t const port);
+uint32_t USB_MIDI_Send(uint8_t const port, uint8_t const* const buff, uint32_t const cnt);
+int32_t  USB_MIDI_BytesToSend(uint8_t const port);
+void     USB_MIDI_DropMessages(uint8_t const port, uint8_t drop);

@@ -260,7 +260,7 @@ const uint8_t USB_MIDI_HSConfigDescriptor[] = {
 };
 
 /* USB String Descriptor (optional) */
-uint8_t USBA_MIDI_StringDescriptor[] = {
+const uint8_t USB0_MIDI_StringDescriptor[] = {
   /* Index 0x00: LANGID Codes */
   0x04,                           /* bLength */
   USB_STRING_DESCRIPTOR_TYPE,     /* bDescriptorType */
@@ -295,17 +295,13 @@ uint8_t USBA_MIDI_StringDescriptor[] = {
   'g', 0,
   'e', 0,
   '(', 0,
-#if USBA_PORT_FOR_MIDI == 0
   'H', 0,
-#else
-  'F', 0,
-#endif
   'S', 0,
   ')', 0,
   0, 0
 
 };
-uint8_t USBB_MIDI_StringDescriptor[] = {
+const uint8_t USB1_MIDI_StringDescriptor[] = {
   /* Index 0x00: LANGID Codes */
   0x04,                           /* bLength */
   USB_STRING_DESCRIPTOR_TYPE,     /* bDescriptorType */
@@ -340,11 +336,7 @@ uint8_t USBB_MIDI_StringDescriptor[] = {
   'g', 0,
   'e', 0,
   '(', 0,
-#if USBB_PORT_FOR_MIDI == 0
-  'H', 0,
-#else
   'F', 0,
-#endif
   'S', 0,
   ')', 0,
   0, 0

@@ -9,73 +9,88 @@
 #include "cmsis/LPC43xx.h"
 #include "cmsis/lpc_types.h"
 #include "usb/nl_usbd.h"
-#include "usb/nl_usba_core.h"
+#include "usb/nl_usb_core.h"
 #include "sys/nl_stdlib.h"
 
-#ifdef __CC_ARM
-#pragma diag_suppress 111, 177, 1441
-#endif
+static uint32_t EPAdr(uint32_t const EPNum);
+static void     SetAddress(uint8_t const port, uint32_t const adr);
+static void     Reset(uint8_t const port);
+static uint32_t ReadSetupPkt(uint8_t const port, uint32_t const EPNum, uint32_t *const pData);
+static void     SetupStage(uint8_t const port);
+static void     DataInStage(uint8_t const port);
+static void     DataOutStage(uint8_t const port);
+static void     StatusInStage(uint8_t const port);
+static void     StatusOutStage(uint8_t const port);
+static void     WakeUpCfg(uint32_t const cfg);
+static void     Configure(uint32_t const cfg);
+static void     DirCtrlEP(uint32_t const dir);
+static uint32_t USB_SetTestMode(uint8_t const port, uint8_t const mode);
+static void     SetStallEP(uint8_t const port, uint32_t const EPNum);
+static void     ClrStallEP(uint8_t const port, uint32_t const EPNum);
+static uint32_t ReqSetClrFeature(uint8_t const port, uint32_t const sc);
+static void     ConfigEP(uint8_t const port, USB_ENDPOINT_DESCRIPTOR const *const pEPD);
+static void     EnableEP(uint8_t const port, uint32_t const EPNum);
+static void     DisableEP(uint8_t const port, uint32_t const EPNum);
+static void     EndPoint0(uint8_t const port, uint32_t const event);
+static void     Handler(uint8_t const port);
 
-#if defined(__GNUC__)
-#define __packed __attribute__((__packed__))
-#endif
+static DQH_T ep_QH_0[EP_NUM_MAX] __attribute__((aligned(2048)));
+static DTD_T ep_TD_0[EP_NUM_MAX] __attribute__((aligned(32)));
 
-#ifdef __ICCARM__
-#pragma data_alignment = 2048
-static DQH_T ep_QH[EP_NUM_MAX];
-#pragma data_alignment = 32
-static DTD_T ep_TD[EP_NUM_MAX];
-#pragma data_alignment = 4
-#elif defined(__GNUC__)
-#define __align(x) __attribute__((aligned(x)))
-static DQH_T ep_QH[EP_NUM_MAX] __attribute__((aligned(2048)));
-static DTD_T ep_TD[EP_NUM_MAX] __attribute__((aligned(32)));
-#else
-static DQH_T __align(2048) ep_QH[EP_NUM_MAX];
-static DTD_T __align(32) ep_TD[EP_NUM_MAX];
-#endif
+static DQH_T ep_QH_1[EP_NUM_MAX] __attribute__((aligned(2048)));
+static DTD_T ep_TD_1[EP_NUM_MAX] __attribute__((aligned(32)));
 
-static uint32_t ep_read_len[3];
+#pragma pack(push, 4)
+typedef struct
+{
+  LPC_USB0_Type *       hardware;
+  DQH_T *               ep_QH;
+  DTD_T *               ep_TD;
+  uint32_t              ep_read_len[3];
+  EndpointCallback      P_EPCallback[USB_EP_NUM];
+  InterfaceEventHandler Interface_Event;
+  ClassRequestHandler   Class_Specific_Request;
+  SOFHandler            SOF_Event;
+  uint16_t              DeviceStatus;
+  uint8_t               DeviceAddress;
+  uint8_t               Configuration;
+  uint32_t              EndPointMask;
+  uint32_t              EndPointHalt;
+  uint32_t              EndPointStall; /* EP must stay stalled */
+  uint8_t               NumInterfaces;
+  uint8_t               AltSetting[USB_IF_NUM];
+  USB_EP_DATA           EP0Data;
+  uint8_t               EP0Buf[USB_MAX_PACKET0];
+  USB_SETUP_PACKET      SetupPacket;
+  volatile uint32_t     DevStatusFS2HS;
+  uint8_t const *       DeviceDescriptor;
+  uint8_t const *       FSConfigDescriptor;
+  uint8_t const *       HSConfigDescriptor;
+  uint8_t const *       StringDescriptor;
+  uint8_t const *       DeviceQualifier;
+  uint8_t const *       FSOtherSpeedConfiguration;
+  uint8_t const *       HSOtherSpeedConfiguration;
+  uint8_t               activity;
+  uint8_t               gotConfigDescriptorRequest;
+  uint8_t               connectionEstablished;
+} usb_core_t;
 
-static EndpointCallback USB_P_EP[USB_EP_NUM];
-
-static InterfaceEventHandler USB_Interface_Event        = NULL;
-static ClassRequestHandler   USB_Class_Specific_Request = NULL;
-static SOFHandler            USB_SOF_Event              = NULL;
-
-static uint16_t USB_DeviceStatus;
-static uint8_t  USB_DeviceAddress;
-static uint8_t  USB_Configuration;
-static uint32_t USB_EndPointMask;
-static uint32_t USB_EndPointHalt;
-static uint32_t USB_EndPointStall; /* EP must stay stalled */
-static uint8_t  USB_NumInterfaces;
-static uint8_t  USB_AltSetting[USB_IF_NUM];
-
-static USB_EP_DATA EP0Data;
-
-#pragma pack(4)
-static uint8_t          EP0Buf[USB_MAX_PACKET0];
-static USB_SETUP_PACKET SetupPacket;
-
-static volatile uint32_t DevStatusFS2HS = FALSE;
-
-static const uint8_t *USB_DeviceDescriptor;
-static const uint8_t *USB_FSConfigDescriptor;
-static const uint8_t *USB_HSConfigDescriptor;
-static const uint8_t *USB_StringDescriptor;
-static const uint8_t *USB_DeviceQualifier;
-static const uint8_t *USB_FSOtherSpeedConfiguration;
-static const uint8_t *USB_HSOtherSpeedConfiguration;
-
-static void USB_EndPoint0(uint32_t event);
+static usb_core_t usb[2] = {
+  { .hardware = ((LPC_USB0_Type *) LPC_USB0_BASE),
+    .ep_QH    = &ep_QH_0[0],
+    .ep_TD    = &ep_TD_0[0] },
+  { .hardware = ((LPC_USB0_Type *) LPC_USB1_BASE),
+    .ep_QH    = &ep_QH_1[0],
+    .ep_TD    = &ep_TD_1[0] },
+};
+#pragma pack(pop)
 
 /******************************************************************************/
 /** @brief		Translates the logical endpoint address to physical
     @param[in]	EPNum	endpoint number
     @return		Physical endpoint address
 *******************************************************************************/
-static uint32_t EPAdr(uint32_t EPNum)
+static inline uint32_t EPAdr(uint32_t const EPNum)
 {
   uint32_t val;
 
@@ -91,58 +106,58 @@ static uint32_t EPAdr(uint32_t EPNum)
 /** @brief		Set the USB device address
     @param[in]	adr		Device address
 *******************************************************************************/
-static void USB_SetAddress(uint32_t adr)
+static void inline SetAddress(uint8_t const port, uint32_t const adr)
 {
-  LPC_USBA->DEVICEADDR = USBDEV_ADDR(adr);
-  LPC_USBA->DEVICEADDR |= USBDEV_ADDR_AD;
+  usb[port].hardware->DEVICEADDR = USBDEV_ADDR(adr);
+  usb[port].hardware->DEVICEADDR |= USBDEV_ADDR_AD;
 }
 
 /******************************************************************************/
 /** @brief    Function for reseting the USB MIDI driver
 *******************************************************************************/
-static void USB_Reset(void)
+static void Reset(uint8_t const port)
 {
   uint32_t i;
 
-  DevStatusFS2HS = FALSE;
+  usb[port].DevStatusFS2HS = FALSE;
   /* disable all EPs */
-  LPC_USBA->ENDPTCTRL0 &= ~(EPCTRL_RXE | EPCTRL_TXE);
-  LPC_USBA->ENDPTCTRL1 &= ~(EPCTRL_RXE | EPCTRL_TXE);
-  LPC_USBA->ENDPTCTRL2 &= ~(EPCTRL_RXE | EPCTRL_TXE);
-  LPC_USBA->ENDPTCTRL3 &= ~(EPCTRL_RXE | EPCTRL_TXE);
+  usb[port].hardware->ENDPTCTRL0 &= ~(EPCTRL_RXE | EPCTRL_TXE);
+  usb[port].hardware->ENDPTCTRL1 &= ~(EPCTRL_RXE | EPCTRL_TXE);
+  usb[port].hardware->ENDPTCTRL2 &= ~(EPCTRL_RXE | EPCTRL_TXE);
+  usb[port].hardware->ENDPTCTRL3 &= ~(EPCTRL_RXE | EPCTRL_TXE);
 
   /* Clear all pending interrupts */
-  LPC_USBA->ENDPTNAK       = 0xFFFFFFFF;
-  LPC_USBA->ENDPTNAKEN     = 0;
-  LPC_USBA->USBSTS_D       = 0xFFFFFFFF;
-  LPC_USBA->ENDPTSETUPSTAT = LPC_USBA->ENDPTSETUPSTAT;
-  LPC_USBA->ENDPTCOMPLETE  = LPC_USBA->ENDPTCOMPLETE;
-  while (LPC_USBA->ENDPTPRIME) /* Wait until all bits are 0 */
+  usb[port].hardware->ENDPTNAK       = 0xFFFFFFFF;
+  usb[port].hardware->ENDPTNAKEN     = 0;
+  usb[port].hardware->USBSTS_D       = 0xFFFFFFFF;
+  usb[port].hardware->ENDPTSETUPSTAT = usb[port].hardware->ENDPTSETUPSTAT;
+  usb[port].hardware->ENDPTCOMPLETE  = usb[port].hardware->ENDPTCOMPLETE;
+  while (usb[port].hardware->ENDPTPRIME) /* Wait until all bits are 0 */
   {
   }
-  LPC_USBA->ENDPTFLUSH = 0xFFFFFFFF;
-  while (LPC_USBA->ENDPTFLUSH)
+  usb[port].hardware->ENDPTFLUSH = 0xFFFFFFFF;
+  while (usb[port].hardware->ENDPTFLUSH)
     ; /* Wait until all bits are 0 */
 
   /* Set the interrupt Threshold control interval to 0 */
-  LPC_USBA->USBCMD_D &= ~0x00FF0000;
+  usb[port].hardware->USBCMD_D &= ~0x00FF0000;
 
   /* Zero out the Endpoint queue heads */
-  memset((void *) ep_QH, 0, EP_NUM_MAX * sizeof(DQH_T));
+  memset((void *) usb[port].ep_QH, 0, EP_NUM_MAX * sizeof(DQH_T));
   /* Zero out the device transfer descriptors */
-  memset((void *) ep_TD, 0, EP_NUM_MAX * sizeof(DTD_T));
-  memset((void *) ep_read_len, 0, sizeof(ep_read_len));
+  memset((void *) usb[port].ep_TD, 0, EP_NUM_MAX * sizeof(DTD_T));
+  memset((void *) usb[port].ep_read_len, 0, sizeof(usb[port].ep_read_len));
   /* Configure the Endpoint List Address */
   /* make sure it in on 64 byte boundary !!! */
   /* init list address */
-  LPC_USBA->ENDPOINTLISTADDR = (uint32_t) ep_QH;
+  usb[port].hardware->ENDPOINTLISTADDR = (uint32_t) & (usb[port].ep_QH[0]);
   /* Initialize device queue heads for non ISO endpoint only */
   for (i = 0; i < EP_NUM_MAX; i++)
   {
-    ep_QH[i].next_dTD = (uint32_t) &ep_TD[i];
+    usb[port].ep_QH[i].next_dTD = (uint32_t) & (usb[port].ep_TD[i]);
   }
   /* Enable interrupts */
-  LPC_USBA->USBINTR_D = USBSTS_UI
+  usb[port].hardware->USBINTR_D = USBSTS_UI
       | USBSTS_UEI
       | USBSTS_PCI
       | USBSTS_URI
@@ -150,14 +165,14 @@ static void USB_Reset(void)
       | USBSTS_SLI
       | USBSTS_NAKI;
   /* enable ep0 IN and ep0 OUT */
-  ep_QH[0].cap = QH_MAXP(USB_MAX_PACKET0)
+  usb[port].ep_QH[0].cap = QH_MAXP(USB_MAX_PACKET0)
       | QH_IOS
       | QH_ZLT;
-  ep_QH[1].cap = QH_MAXP(USB_MAX_PACKET0)
+  usb[port].ep_QH[1].cap = QH_MAXP(USB_MAX_PACKET0)
       | QH_IOS
       | QH_ZLT;
   /* enable EP0 */
-  LPC_USBA->ENDPTCTRL0 = EPCTRL_RXE | EPCTRL_RXR | EPCTRL_TXE | EPCTRL_TXR;
+  usb[port].hardware->ENDPTCTRL0 = EPCTRL_RXE | EPCTRL_RXR | EPCTRL_TXE | EPCTRL_TXR;
   return;
 }
 
@@ -169,14 +184,14 @@ static void USB_Reset(void)
     @param[in]	pData	Pointer to data buffer
     @return		Number of bytes read
 *******************************************************************************/
-static uint32_t USB_ReadSetupPkt(uint32_t EPNum, uint32_t *pData)
+static uint32_t ReadSetupPkt(uint8_t const port, uint32_t const EPNum, uint32_t *const pData)
 {
   uint32_t setup_int, cnt = 0;
   uint32_t num = EPAdr(EPNum);
 
-  setup_int = LPC_USBA->ENDPTSETUPSTAT;
+  setup_int = usb[port].hardware->ENDPTSETUPSTAT;
   /* Clear the setup interrupt */
-  LPC_USBA->ENDPTSETUPSTAT = setup_int;
+  usb[port].hardware->ENDPTSETUPSTAT = setup_int;
 
   /*  Check if we have received a setup */
   if (setup_int & (1 << 0)) /* Check only for bit 0 */
@@ -186,22 +201,22 @@ static uint32_t USB_ReadSetupPkt(uint32_t EPNum, uint32_t *pData)
     {
       /* Setup in a setup - must consider only the second setup */
       /*- Set the tripwire */
-      LPC_USBA->USBCMD_D |= USBCMD_SUTW;
+      usb[port].hardware->USBCMD_D |= USBCMD_SUTW;
 
       /* Transfer Set-up data to the gtmudsCore_Request buffer */
-      pData[0] = ep_QH[num].setup[0];
-      pData[1] = ep_QH[num].setup[1];
+      pData[0] = usb[port].ep_QH[num].setup[0];
+      pData[1] = usb[port].ep_QH[num].setup[1];
       cnt      = 8;
 
-    } while (!(LPC_USBA->USBCMD_D & USBCMD_SUTW));
+    } while (!(usb[port].hardware->USBCMD_D & USBCMD_SUTW));
 
     /* setup in a setup - Clear the tripwire */
-    LPC_USBA->USBCMD_D &= (~USBCMD_SUTW);
+    usb[port].hardware->USBCMD_D &= (~USBCMD_SUTW);
   }
-  while ((setup_int = LPC_USBA->ENDPTSETUPSTAT) != 0)
+  while ((setup_int = usb[port].hardware->ENDPTSETUPSTAT) != 0)
   {
     /* Clear the setup interrupt */
-    LPC_USBA->ENDPTSETUPSTAT = setup_int;
+    usb[port].hardware->ENDPTSETUPSTAT = setup_int;
   }
   return cnt;
 }
@@ -209,94 +224,89 @@ static uint32_t USB_ReadSetupPkt(uint32_t EPNum, uint32_t *pData)
 /******************************************************************************/
 /** @brief		Init USB core
 *******************************************************************************/
-void USBA_Core_Init(void)
+void USB_Core_Init(uint8_t const port)
 {
-  USB_P_EP[0] = USB_EndPoint0;
+  usb[port].P_EPCallback[0] = EndPoint0;
 
   /* Turn on the phy */
-#if USBA_PORT_FOR_MIDI == 0
-  LPC_CREG->CREG0 &= ~(1 << 5);
-#else
-  /*                USB_AIM    USB_ESEA   USB_EPD    USB_EPWR   USB_VBUS */
-  LPC_SCU->SFSUSB = (0 << 0) | (1 << 1) | (0 << 2) | (1 << 4) | (1 << 5);
-#endif
+  if (port == 0)
+    LPC_CREG->CREG0 &= ~(1 << 5);
+  else
+    /*                USB_AIM    USB_ESEA   USB_EPD    USB_EPWR   USB_VBUS */
+    LPC_SCU->SFSUSB = (0 << 0) | (1 << 1) | (0 << 2) | (1 << 4) | (1 << 5);
 
   /* reset the controller */
-  LPC_USBA->USBCMD_D = USBCMD_RST;
+  usb[port].hardware->USBCMD_D = USBCMD_RST;
   /* wait for reset to complete */
-  while (LPC_USBA->USBCMD_D & USBCMD_RST)
+  while (usb[port].hardware->USBCMD_D & USBCMD_RST)
     ;
 
   /* Program the controller to be the USB device controller */
-  LPC_USBA->USBMODE_D = USBMODE_CM_DEV
+  usb[port].hardware->USBMODE_D = USBMODE_CM_DEV
       | USBMODE_SDIS
       | USBMODE_SLOM;
 
-#if USBA_PORT_FOR_MIDI == 0
-  /* set OTG transceiver in proper state */
-  /*                VBUS=1     MODE=DEVICE */
-  LPC_USBA->OTGSC = (1 << 1) | (1 << 3);
+  if (port == 0)
+  {
+    /* set OTG transceiver in proper state */
+    /*                VBUS=1     MODE=DEVICE */
+    usb[port].hardware->OTGSC = (1 << 1) | (1 << 3);
+  }
+
+#if USB_POLLING
+
+  if (port == 0)
+    NVIC_DisableIRQ(USB0_IRQn);
+  else
+    NVIC_DisableIRQ(USB1_IRQn);
+
+#else
+
+  if (port == 0)
+    NVIC_EnableIRQ(USB0_IRQn);
+  else
+    NVIC_EnableIRQ(USB1_IRQn);
+
 #endif
 
-#if USBA_PORT_FOR_MIDI == 0
-#if USB_POLLING
-  NVIC_DisableIRQ(USB0_IRQn);
-#else
-  NVIC_EnableIRQ(USB0_IRQn);
-#endif
-#else
-#if USB_POLLING
-  NVIC_DisableIRQ(USB1_IRQn);
-#else
-  NVIC_EnableIRQ(USB1_IRQn);
-#endif
-#endif
-
-  USB_Reset();
-  USB_SetAddress(0);
+  Reset(port);
+  SetAddress(port, 0);
 
   /* USB Connect */
-  LPC_USBA->USBCMD_D |= USBCMD_RS;
-#if !USB_POLLING
-  while (!USB_Configuration)
-    ;
-#endif
+  usb[port].hardware->USBCMD_D |= USBCMD_RS;
 }
 
-static uint8_t activity                   = 0;
-static uint8_t gotConfigDescriptorRequest = 0;
-
-uint8_t USBA_GetActivity(void)
+uint8_t USB_GetActivity(uint8_t const port)
 {
-  uint8_t ret = activity;
-  activity    = 0;
+  uint8_t ret        = usb[port].activity;
+  usb[port].activity = 0;
   return ret;
 }
 
-uint8_t USBA_SetupComplete(void)
+uint8_t USB_SetupComplete(uint8_t const port)
 {
-  return gotConfigDescriptorRequest;
+  return usb[port].gotConfigDescriptorRequest;
 }
 
-void USBA_Core_DeInit(void)
+void USB_Core_DeInit(uint8_t const port)
 {
-  gotConfigDescriptorRequest = 0;
+  usb[port].gotConfigDescriptorRequest = 0;
+  usb[port].connectionEstablished      = 0;
 
   /* Turn off the phy */
-#if USBA_PORT_FOR_MIDI == 0
-  LPC_CREG->CREG0 |= (1 << 5);
-#else
-  /*                USB_AIM    USB_ESEA   USB_EPD    USB_EPWR   USB_VBUS */
-  LPC_SCU->SFSUSB = (0 << 0) | (0 << 1) | (0 << 2) | (1 << 4) | (0 << 5);
-#endif
+  if (port == 0)
+    LPC_CREG->CREG0 |= (1 << 5);
+  else
+    /*                USB_AIM    USB_ESEA   USB_EPD    USB_EPWR   USB_VBUS */
+    LPC_SCU->SFSUSB = (0 << 0) | (0 << 1) | (0 << 2) | (1 << 4) | (0 << 5);
 }
 
 /*****************************************************************************/
 /** @brief		Force the Full Speed for the USB controller
 *******************************************************************************/
-void USBA_Core_ForceFullSpeed(void)
+void USB_Core_ForceFullSpeed(uint8_t const port)
 {
-  LPC_USBA->PORTSC1_D |= (1 << 24);
+  usb[port].hardware->PORTSC1_D |= (1 << 24);
 }
 
 /******************************************************************************/
@@ -304,20 +314,23 @@ void USBA_Core_ForceFullSpeed(void)
     @param[in]	ep		Endpoint number
     @param[in]	cb		Callback function pointer
 *******************************************************************************/
-void USBA_Core_Endpoint_Callback_Set(uint8_t ep, EndpointCallback cb)
+void USB_Core_Endpoint_Callback_Set(uint8_t const port, uint8_t const ep, EndpointCallback const cb)
 {
   if ((ep >= EP_NUM_MAX) || (ep == 0))
     return;
-  USB_P_EP[ep] = cb;
+  usb[port].P_EPCallback[ep] = cb;
 }
 
 /******************************************************************************/
-/** @brief		Checks whether the USB is connected and configured
+/** @brief		Checks whether the USB is connected and configured, up and running
     @return		1 - Success ; 0 - Failure
 *******************************************************************************/
-uint8_t USBA_Core_IsConfigured(void)
+uint8_t USB_Core_IsConfigured(uint8_t const port)
 {
-  return (LPC_USBA->PORTSC1_D & (1 << 0)) && USB_Configuration;
+  return (usb[port].hardware->PORTSC1_D & (1 << 0))
+      && usb[port].Configuration
+      && usb[port].gotConfigDescriptorRequest
+      && usb[port].connectionEstablished;
 }
 
 /******************************************************************************/
@@ -325,10 +338,10 @@ uint8_t USBA_Core_IsConfigured(void)
 	@param[in]	ep	Endpoint number
     @return		1 - Success ; 0 - Failure
 *******************************************************************************/
-uint8_t USBA_Core_ReadyToWrite(uint8_t epnum)
+uint8_t USB_Core_ReadyToWrite(uint8_t const port, uint8_t const epnum)
 {
   uint32_t ep = EPAdr(epnum);
-  if ((ep_TD[ep].next_dTD & 1) && ((ep_TD[ep].total_bytes & 1 << 7) == 0))
+  if ((usb[port].ep_TD[ep].next_dTD & 1) && ((usb[port].ep_TD[ep].total_bytes & 1 << 7) == 0))
     return 1;
   else
     return 0;
@@ -337,99 +350,99 @@ uint8_t USBA_Core_ReadyToWrite(uint8_t epnum)
 /******************************************************************************/
 /** @brief		Reset USB core
 *******************************************************************************/
-void USBA_ResetCore(void)
+void USB_ResetCore(uint8_t const port)
 {
 
-  USB_DeviceStatus  = 1;
-  USB_DeviceAddress = 0;
-  USB_Configuration = 0;
-  USB_EndPointMask  = 0x00010001;
-  USB_EndPointHalt  = 0x00000000;
-  USB_EndPointStall = 0x00000000;
+  usb[port].DeviceStatus  = 1;
+  usb[port].DeviceAddress = 0;
+  usb[port].Configuration = 0;
+  usb[port].EndPointMask  = 0x00010001;
+  usb[port].EndPointHalt  = 0x00000000;
+  usb[port].EndPointStall = 0x00000000;
 }
 
 /******************************************************************************/
 /** @brief		USB Request - Setup stage
 *******************************************************************************/
-void USBA_SetupStage(void)
+static inline void SetupStage(uint8_t const port)
 {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 #pragma GCC diagnostic ignored "-Wattributes"
-  USB_ReadSetupPkt(0x00, (uint32_t *) &SetupPacket);
+  ReadSetupPkt(port, 0x00, (uint32_t *) &usb[port].SetupPacket);
 #pragma GCC diagnostic push
 }
 
 /******************************************************************************/
 /** @brief		USB Request - Data in stage
 *******************************************************************************/
-void USBA_DataInStage(void)
+static inline void DataInStage(uint8_t const port)
 {
   uint32_t cnt;
 
-  if (EP0Data.Count > USB_MAX_PACKET0)
+  if (usb[port].EP0Data.Count > USB_MAX_PACKET0)
   {
     cnt = USB_MAX_PACKET0;
   }
   else
   {
-    cnt = EP0Data.Count;
+    cnt = usb[port].EP0Data.Count;
   }
-  cnt = USBA_WriteEP(0x80, EP0Data.pData, cnt);
-  EP0Data.pData += cnt;
-  EP0Data.Count -= cnt;
+  cnt = USB_WriteEP(port, 0x80, usb[port].EP0Data.pData, cnt);
+  usb[port].EP0Data.pData += cnt;
+  usb[port].EP0Data.Count -= cnt;
 }
 
 /******************************************************************************/
 /** @brief		USB Request - Data out stage
 *******************************************************************************/
-void USBA_DataOutStage(void)
+static inline void DataOutStage(uint8_t const port)
 {
   uint32_t cnt;
 
-  cnt = USBA_ReadEP(0x00, EP0Data.pData);
-  EP0Data.pData += cnt;
-  EP0Data.Count -= cnt;
+  cnt = USB_ReadEP(port, 0x00, usb[port].EP0Data.pData);
+  usb[port].EP0Data.pData += cnt;
+  usb[port].EP0Data.Count -= cnt;
 }
 
 /******************************************************************************/
 /** @brief		USB Request - Status in stage
 *******************************************************************************/
-void USBA_StatusInStage(void)
+static inline void StatusInStage(uint8_t const port)
 {
-  USBA_WriteEP(0x80, NULL, 0);
+  USB_WriteEP(port, 0x80, NULL, 0);
 }
 
 /******************************************************************************/
 /** @brief		USB Request - Status out stage
 *******************************************************************************/
-void USBA_StatusOutStage(void)
+static void inline StatusOutStage(uint8_t const port)
 {
-  USBA_ReadEP(0x00, EP0Buf);
+  USB_ReadEP(port, 0x00, usb[port].EP0Buf);
 }
 
 /******************************************************************************/
 /** @brief		Get Status USB request
     @return		TRUE - success; FALSE - error
 *******************************************************************************/
-uint32_t USBA_ReqGetStatus(void)
+uint32_t USB_ReqGetStatus(uint8_t const port)
 {
   uint32_t n, m;
 
-  switch (SetupPacket.bmRequestType.BM.Recipient)
+  switch (usb[port].SetupPacket.bmRequestType.BM.Recipient)
   {
     case REQUEST_TO_DEVICE:
-      EP0Data.pData = (uint8_t *) &USB_DeviceStatus;
+      usb[port].EP0Data.pData = (uint8_t *) &usb[port].DeviceStatus;
       break;
     case REQUEST_TO_INTERFACE:
-      if ((USB_Configuration != 0) && (SetupPacket.wIndex.WB.L < USB_NumInterfaces))
+      if ((usb[port].Configuration != 0) && (usb[port].SetupPacket.wIndex.WB.L < usb[port].NumInterfaces))
       {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Wattributes"
-        *((__packed uint16_t *) EP0Buf) = 0;
+        *((__attribute__((__packed__)) uint16_t *) usb[port].EP0Buf) = 0;
 #pragma GCC diagnostic pop
-        EP0Data.pData = EP0Buf;
+        usb[port].EP0Data.pData = usb[port].EP0Buf;
       }
       else
       {
@@ -437,15 +450,15 @@ uint32_t USBA_ReqGetStatus(void)
       }
       break;
     case REQUEST_TO_ENDPOINT:
-      n = SetupPacket.wIndex.WB.L & 0x8F;
+      n = usb[port].SetupPacket.wIndex.WB.L & 0x8F;
       m = (n & 0x80) ? ((1 << 16) << (n & 0x0F)) : (1 << n);
-      if (((USB_Configuration != 0) || ((n & 0x0F) == 0)) && (USB_EndPointMask & m))
+      if (((usb[port].Configuration != 0) || ((n & 0x0F) == 0)) && (usb[port].EndPointMask & m))
       {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
-        *((__packed uint16_t *) EP0Buf) = (USB_EndPointHalt & m) ? 1 : 0;
+        *((__attribute__((__packed__)) uint16_t *) usb[port].EP0Buf) = (usb[port].EndPointHalt & m) ? 1 : 0;
 #pragma GCC diagnostic pop
-        EP0Data.pData = EP0Buf;
+        usb[port].EP0Data.pData = usb[port].EP0Buf;
       }
       else
       {
@@ -458,17 +471,17 @@ uint32_t USBA_ReqGetStatus(void)
   return (TRUE);
 }
 
-static void USB_WakeUpCfg(uint32_t cfg)
+static inline void WakeUpCfg(uint32_t const cfg)
 {
   /* Not needed */
 }
 
-static void USB_Configure(uint32_t cfg)
+static inline void Configure(uint32_t const cfg)
 {
   /* Not needed */
 }
 
-static void USB_DirCtrlEP(uint32_t dir)
+static inline void DirCtrlEP(uint32_t const dir)
 {
   /* Not needed */
 }
@@ -478,15 +491,15 @@ static void USB_DirCtrlEP(uint32_t dir)
     @param[in]	mode	Test mode
     @return		TRUE if supported, else FALSE
 *******************************************************************************/
-static uint32_t USB_SetTestMode(uint8_t mode)
+static inline uint32_t USB_SetTestMode(uint8_t const port, uint8_t const mode)
 {
   uint32_t portsc;
 
   if ((mode > 0) && (mode < 8))
   {
-    portsc = LPC_USBA->PORTSC1_D & ~(0xF << 16);
+    portsc = usb[port].hardware->PORTSC1_D & ~(0xF << 16);
 
-    LPC_USBA->PORTSC1_D = portsc | (mode << 16);
+    usb[port].hardware->PORTSC1_D = portsc | (mode << 16);
     return TRUE;
   }
   return (FALSE);
@@ -498,18 +511,18 @@ static uint32_t USB_SetTestMode(uint8_t mode)
     					7	Direction (0 - out; 1-in)
     					3:0	Endpoint number
 *******************************************************************************/
-static void USB_SetStallEP(uint32_t EPNum)
+static inline void SetStallEP(uint8_t const port, uint32_t const EPNum)
 {
   uint32_t lep;
 
   lep = EPNum & 0x0F;
   if (EPNum & 0x80)
   {
-    ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep] |= EPCTRL_TXS;
+    ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] |= EPCTRL_TXS;
   }
   else
   {
-    ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep] |= EPCTRL_RXS;
+    ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] |= EPCTRL_RXS;
   }
 }
 
@@ -519,22 +532,22 @@ static void USB_SetStallEP(uint32_t EPNum)
     					7	Direction (0 - out; 1-in)
     					3:0	Endpoint number
 *******************************************************************************/
-static void USB_ClrStallEP(uint32_t EPNum)
+static inline void ClrStallEP(uint8_t const port, uint32_t const EPNum)
 {
   uint32_t lep;
 
   lep = EPNum & 0x0F;
   if (EPNum & 0x80)
   {
-    ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep] &= ~EPCTRL_TXS;
+    ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] &= ~EPCTRL_TXS;
     /* reset data toggle */
-    ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep] |= EPCTRL_TXR;
+    ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] |= EPCTRL_TXR;
   }
   else
   {
-    ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep] &= ~EPCTRL_RXS;
+    ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] &= ~EPCTRL_RXS;
     /* reset data toggle */
-    ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep] |= EPCTRL_RXR;
+    ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] |= EPCTRL_RXR;
   }
 }
 
@@ -543,29 +556,29 @@ static void USB_ClrStallEP(uint32_t EPNum)
     @param[in]	sc	0 - clear; 1 - set
     @return		TRUE - success; FALSE - error
 *******************************************************************************/
-uint32_t USBA_ReqSetClrFeature(uint32_t sc)
+static uint32_t ReqSetClrFeature(uint8_t const port, uint32_t const sc)
 {
   uint32_t n, m;
 
-  switch (SetupPacket.bmRequestType.BM.Recipient)
+  switch (usb[port].SetupPacket.bmRequestType.BM.Recipient)
   {
     case REQUEST_TO_DEVICE:
-      if (SetupPacket.wValue.W == USB_FEATURE_REMOTE_WAKEUP)
+      if (usb[port].SetupPacket.wValue.W == USB_FEATURE_REMOTE_WAKEUP)
       {
         if (sc)
         {
-          USB_WakeUpCfg(TRUE);
-          USB_DeviceStatus |= USB_GETSTATUS_REMOTE_WAKEUP;
+          WakeUpCfg(TRUE);
+          usb[port].DeviceStatus |= USB_GETSTATUS_REMOTE_WAKEUP;
         }
         else
         {
-          USB_WakeUpCfg(FALSE);
-          USB_DeviceStatus &= ~USB_GETSTATUS_REMOTE_WAKEUP;
+          WakeUpCfg(FALSE);
+          usb[port].DeviceStatus &= ~USB_GETSTATUS_REMOTE_WAKEUP;
         }
       }
-      else if (SetupPacket.wValue.W == USB_FEATURE_TEST_MODE)
+      else if (usb[port].SetupPacket.wValue.W == USB_FEATURE_TEST_MODE)
       {
-        return USB_SetTestMode(SetupPacket.wIndex.WB.H);
+        return USB_SetTestMode(port, usb[port].SetupPacket.wIndex.WB.H);
       }
       else
       {
@@ -575,25 +588,25 @@ uint32_t USBA_ReqSetClrFeature(uint32_t sc)
     case REQUEST_TO_INTERFACE:
       return (FALSE);
     case REQUEST_TO_ENDPOINT:
-      n = SetupPacket.wIndex.WB.L & 0x8F;
+      n = usb[port].SetupPacket.wIndex.WB.L & 0x8F;
       m = (n & 0x80) ? ((1 << 16) << (n & 0x0F)) : (1 << n);
-      if ((USB_Configuration != 0) && ((n & 0x0F) != 0) && (USB_EndPointMask & m))
+      if ((usb[port].Configuration != 0) && ((n & 0x0F) != 0) && (usb[port].EndPointMask & m))
       {
-        if (SetupPacket.wValue.W == USB_FEATURE_ENDPOINT_STALL)
+        if (usb[port].SetupPacket.wValue.W == USB_FEATURE_ENDPOINT_STALL)
         {
           if (sc)
           {
-            USB_SetStallEP(n);
-            USB_EndPointHalt |= m;
+            SetStallEP(port, n);
+            usb[port].EndPointHalt |= m;
           }
           else
           {
-            if ((USB_EndPointStall & m) != 0)
+            if ((usb[port].EndPointStall & m) != 0)
             {
               return (TRUE);
             }
-            USB_ClrStallEP(n);
-            USB_EndPointHalt &= ~m;
+            ClrStallEP(port, n);
+            usb[port].EndPointHalt &= ~m;
           }
         }
         else
@@ -616,13 +629,13 @@ uint32_t USBA_ReqSetClrFeature(uint32_t sc)
 /** @brief		Set Address USB request
     @return		TRUE - success; FALSE - error
 *******************************************************************************/
-uint32_t USBA_ReqSetAddress(void)
+uint32_t USB_ReqSetAddress(uint8_t const port)
 {
 
-  switch (SetupPacket.bmRequestType.BM.Recipient)
+  switch (usb[port].SetupPacket.bmRequestType.BM.Recipient)
   {
     case REQUEST_TO_DEVICE:
-      USB_DeviceAddress = 0x80 | SetupPacket.wValue.WB.L;
+      usb[port].DeviceAddress = 0x80 | usb[port].SetupPacket.wValue.WB.L;
       break;
     default:
       return (FALSE);
@@ -634,30 +647,30 @@ uint32_t USBA_ReqSetAddress(void)
 /** @brief		Get Descriptor USB request
     @return		TRUE - success; FALSE - error
 *******************************************************************************/
-uint32_t USBA_ReqGetDescriptor(void)
+uint32_t USB_ReqGetDescriptor(uint8_t const port)
 {
   uint8_t *pD;
   uint32_t len, n;
 
-  switch (SetupPacket.bmRequestType.BM.Recipient)
+  switch (usb[port].SetupPacket.bmRequestType.BM.Recipient)
   {
     case REQUEST_TO_DEVICE:
-      switch (SetupPacket.wValue.WB.H)
+      switch (usb[port].SetupPacket.wValue.WB.H)
       {
         case USB_DEVICE_DESCRIPTOR_TYPE:
-          EP0Data.pData = (uint8_t *) USB_DeviceDescriptor;
-          len           = USB_DEVICE_DESC_SIZE;
+          usb[port].EP0Data.pData = (uint8_t *) usb[port].DeviceDescriptor;
+          len                     = USB_DEVICE_DESC_SIZE;
           break;
         case USB_CONFIGURATION_DESCRIPTOR_TYPE:
-          if (DevStatusFS2HS == FALSE)
+          if (usb[port].DevStatusFS2HS == FALSE)
           {
-            pD = (uint8_t *) USB_FSConfigDescriptor;
+            pD = (uint8_t *) usb[port].FSConfigDescriptor;
           }
           else
           {
-            pD = (uint8_t *) USB_HSConfigDescriptor;
+            pD = (uint8_t *) usb[port].HSConfigDescriptor;
           }
-          for (n = 0; n != SetupPacket.wValue.WB.L; n++)
+          for (n = 0; n != usb[port].SetupPacket.wValue.WB.L; n++)
           {
             if (((USB_CONFIGURATION_DESCRIPTOR *) pD)->bLength != 0)
             {
@@ -668,13 +681,13 @@ uint32_t USBA_ReqGetDescriptor(void)
           {
             return (FALSE);
           }
-          EP0Data.pData              = pD;
-          len                        = ((USB_CONFIGURATION_DESCRIPTOR *) pD)->wTotalLength;
-          gotConfigDescriptorRequest = 1;
+          usb[port].EP0Data.pData              = pD;
+          len                                  = ((USB_CONFIGURATION_DESCRIPTOR *) pD)->wTotalLength;
+          usb[port].gotConfigDescriptorRequest = 1;
           break;
         case USB_STRING_DESCRIPTOR_TYPE:
-          pD = (uint8_t *) USB_StringDescriptor;
-          for (n = 0; n != SetupPacket.wValue.WB.L; n++)
+          pD = (uint8_t *) usb[port].StringDescriptor;
+          for (n = 0; n != usb[port].SetupPacket.wValue.WB.L; n++)
           {
             if (((USB_STRING_DESCRIPTOR *) pD)->bLength != 0)
             {
@@ -685,32 +698,32 @@ uint32_t USBA_ReqGetDescriptor(void)
           {
             return (FALSE);
           }
-          EP0Data.pData = pD;
-          len           = ((USB_STRING_DESCRIPTOR *) pD)->bLength;
+          usb[port].EP0Data.pData = pD;
+          len                     = ((USB_STRING_DESCRIPTOR *) pD)->bLength;
           break;
         case USB_DEVICE_QUALIFIER_DESCRIPTOR_TYPE:
           /* USB Chapter 9. page 9.6.2 */
-          if (DevStatusFS2HS == FALSE)
+          if (usb[port].DevStatusFS2HS == FALSE)
           {
             return (FALSE);
           }
           else
           {
-            EP0Data.pData = (uint8_t *) USB_DeviceQualifier;
-            len           = USB_DEVICE_QUALI_SIZE;
+            usb[port].EP0Data.pData = (uint8_t *) usb[port].DeviceQualifier;
+            len                     = USB_DEVICE_QUALI_SIZE;
           }
           break;
         case USB_OTHER_SPEED_CONFIG_DESCRIPTOR_TYPE:
-          if (DevStatusFS2HS == TRUE)
+          if (usb[port].DevStatusFS2HS == TRUE)
           {
-            pD = (uint8_t *) USB_FSOtherSpeedConfiguration;
+            pD = (uint8_t *) usb[port].FSOtherSpeedConfiguration;
           }
           else
           {
-            pD = (uint8_t *) USB_HSOtherSpeedConfiguration;
+            pD = (uint8_t *) usb[port].HSOtherSpeedConfiguration;
           }
 
-          for (n = 0; n != SetupPacket.wValue.WB.L; n++)
+          for (n = 0; n != usb[port].SetupPacket.wValue.WB.L; n++)
           {
             if (((USB_OTHER_SPEED_CONFIGURATION *) pD)->bLength != 0)
             {
@@ -721,15 +734,15 @@ uint32_t USBA_ReqGetDescriptor(void)
           {
             return (FALSE);
           }
-          EP0Data.pData = pD;
-          len           = ((USB_OTHER_SPEED_CONFIGURATION *) pD)->wTotalLength;
+          usb[port].EP0Data.pData = pD;
+          len                     = ((USB_OTHER_SPEED_CONFIGURATION *) pD)->wTotalLength;
           break;
         default:
           return (FALSE);
       }
       break;
     case REQUEST_TO_INTERFACE:
-      switch (SetupPacket.wValue.WB.H)
+      switch (usb[port].SetupPacket.wValue.WB.H)
       {
         default:
           return (FALSE);
@@ -739,9 +752,9 @@ uint32_t USBA_ReqGetDescriptor(void)
       return (FALSE);
   }
 
-  if (EP0Data.Count > len)
+  if (usb[port].EP0Data.Count > len)
   {
-    EP0Data.Count = len;
+    usb[port].EP0Data.Count = len;
   }
 
   return (TRUE);
@@ -751,7 +764,7 @@ uint32_t USBA_ReqGetDescriptor(void)
 /** @brief		Configure the USB endpoint according to the descriptor
     @param[in]	pEPD	Pointer to the endpoint descriptor
 *******************************************************************************/
-static void USB_ConfigEP(USB_ENDPOINT_DESCRIPTOR *pEPD)
+static void ConfigEP(uint8_t const port, USB_ENDPOINT_DESCRIPTOR const *const pEPD)
 {
   uint32_t num, lep;
   uint32_t ep_cfg;
@@ -760,24 +773,24 @@ static void USB_ConfigEP(USB_ENDPOINT_DESCRIPTOR *pEPD)
   lep = pEPD->bEndpointAddress & 0x7F;
   num = EPAdr(pEPD->bEndpointAddress);
 
-  ep_cfg = ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep];
+  ep_cfg = ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep];
   /* mask the attributes we are not-interested in */
   bmAttributes = pEPD->bmAttributes & USB_ENDPOINT_TYPE_MASK;
   /* set EP type */
   if (bmAttributes != USB_ENDPOINT_TYPE_ISOCHRONOUS)
   {
     /* init EP capabilities */
-    ep_QH[num].cap = QH_MAXP(pEPD->wMaxPacketSize)
+    usb[port].ep_QH[num].cap = QH_MAXP(pEPD->wMaxPacketSize)
         | QH_IOS | QH_ZLT;
     /* The next DTD pointer is INVALID */
-    ep_TD[num].next_dTD = 0x01;
+    usb[port].ep_TD[num].next_dTD = 0x01;
   }
   else
   {
     /* init EP capabilities */
-    ep_QH[num].cap = QH_MAXP(pEPD->wMaxPacketSize) | QH_ZLT | (1 << 30);
+    usb[port].ep_QH[num].cap = QH_MAXP(pEPD->wMaxPacketSize) | QH_ZLT | (1 << 30);
     /* The next DTD pointer is INVALID */
-    ep_QH[num].next_dTD = ep_TD[num].next_dTD = 0x01;
+    usb[port].ep_QH[num].next_dTD = usb[port].ep_TD[num].next_dTD = 0x01;
   }
   /* setup EP control register */
   if (pEPD->bEndpointAddress & 0x80)
@@ -792,7 +805,7 @@ static void USB_ConfigEP(USB_ENDPOINT_DESCRIPTOR *pEPD)
     ep_cfg |= EPCTRL_RX_TYPE(bmAttributes)
         | EPCTRL_RXR;
   }
-  ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep] = ep_cfg;
+  ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] = ep_cfg;
   return;
 }
 
@@ -802,7 +815,7 @@ static void USB_ConfigEP(USB_ENDPOINT_DESCRIPTOR *pEPD)
     					7	Direction (0 - out; 1-in)
     					3:0	Endpoint number
 *******************************************************************************/
-static void USB_EnableEP(uint32_t EPNum)
+static void EnableEP(uint8_t const port, uint32_t const EPNum)
 {
   uint32_t lep, bitpos;
 
@@ -810,19 +823,19 @@ static void USB_EnableEP(uint32_t EPNum)
 
   if (EPNum & 0x80)
   {
-    ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep] |= EPCTRL_TXE;
+    ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] |= EPCTRL_TXE;
 #if USB_POLLING
     /* enable NAK interrupt for IN transfers - useful in polling mode only*/
     bitpos = USB_EP_BITPOS(EPNum);
-    LPC_USBA->ENDPTNAKEN |= (1 << bitpos);
+    usb[port].hardware->ENDPTNAKEN |= (1 << bitpos);
 #endif
   }
   else
   {
-    ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep] |= EPCTRL_RXE;
+    ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] |= EPCTRL_RXE;
     /* enable NAK interrupt */
     bitpos = USB_EP_BITPOS(EPNum);
-    LPC_USBA->ENDPTNAKEN |= (1 << bitpos);
+    usb[port].hardware->ENDPTNAKEN |= (1 << bitpos);
   }
 }
 
@@ -832,7 +845,7 @@ static void USB_EnableEP(uint32_t EPNum)
     					7	Direction (0 - out; 1-in)
     					3:0	Endpoint number
 *******************************************************************************/
-static void USB_DisableEP(uint32_t EPNum)
+static void DisableEP(uint8_t const port, uint32_t const EPNum)
 {
   uint32_t lep, bitpos;
 
@@ -842,16 +855,16 @@ static void USB_DisableEP(uint32_t EPNum)
 #if USB_POLLING
     /* disable NAK interrupt */
     bitpos = USB_EP_BITPOS(EPNum);
-    LPC_USBA->ENDPTNAKEN |= ~(1 << bitpos);
+    usb[port].hardware->ENDPTNAKEN |= ~(1 << bitpos);
 #endif
-    ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep] &= ~EPCTRL_TXE;
+    ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] &= ~EPCTRL_TXE;
   }
   else
   {
     /* disable NAK interrupt */
     bitpos = USB_EP_BITPOS(EPNum);
-    LPC_USBA->ENDPTNAKEN &= ~(1 << bitpos);
-    ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep] &= ~EPCTRL_RXE;
+    usb[port].hardware->ENDPTNAKEN &= ~(1 << bitpos);
+    ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] &= ~EPCTRL_RXE;
   }
 }
 
@@ -861,23 +874,23 @@ static void USB_DisableEP(uint32_t EPNum)
     					7	Direction (0 - out; 1-in)
     					3:0	Endpoint number
 *******************************************************************************/
-void USBA_ResetEP(uint32_t EPNum)
+void USB_ResetEP(uint8_t const port, uint32_t const EPNum)
 {
   uint32_t bit_pos = USB_EP_BITPOS(EPNum);
   uint32_t lep     = EPNum & 0x0F;
 
   /* flush EP buffers */
-  LPC_USBA->ENDPTFLUSH = (1 << bit_pos);
-  while (LPC_USBA->ENDPTFLUSH & (1 << bit_pos))
+  usb[port].hardware->ENDPTFLUSH = (1 << bit_pos);
+  while (usb[port].hardware->ENDPTFLUSH & (1 << bit_pos))
     ;
   /* reset data toggles */
   if (EPNum & 0x80)
   {
-    ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep] |= EPCTRL_TXR;
+    ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] |= EPCTRL_TXR;
   }
   else
   {
-    ((uint32_t *) &(LPC_USBA->ENDPTCTRL0))[lep] |= EPCTRL_RXR;
+    ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] |= EPCTRL_RXR;
   }
 }
 
@@ -885,13 +898,13 @@ void USBA_ResetEP(uint32_t EPNum)
 /** @brief		Get Configuration USB request
     @return		TRUE - success; FALSE - error
 *******************************************************************************/
-uint32_t USBA_ReqGetConfiguration(void)
+uint32_t USB_ReqGetConfiguration(uint8_t const port)
 {
 
-  switch (SetupPacket.bmRequestType.BM.Recipient)
+  switch (usb[port].SetupPacket.bmRequestType.BM.Recipient)
   {
     case REQUEST_TO_DEVICE:
-      EP0Data.pData = &USB_Configuration;
+      usb[port].EP0Data.pData = &usb[port].Configuration;
       break;
     default:
       return (FALSE);
@@ -903,61 +916,61 @@ uint32_t USBA_ReqGetConfiguration(void)
 /** @brief		Set Configuration USB request
     @return		TRUE - success; FALSE - error
 *******************************************************************************/
-uint32_t USBA_ReqSetConfiguration(void)
+uint32_t USB_ReqSetConfiguration(uint8_t const port)
 {
   USB_COMMON_DESCRIPTOR *pD;
   uint32_t               alt = 0;
   uint32_t               n, m;
   uint32_t               new_addr;
-  switch (SetupPacket.bmRequestType.BM.Recipient)
+  switch (usb[port].SetupPacket.bmRequestType.BM.Recipient)
   {
     case REQUEST_TO_DEVICE:
 
-      if (SetupPacket.wValue.WB.L)
+      if (usb[port].SetupPacket.wValue.WB.L)
       {
-        if (DevStatusFS2HS == FALSE)
+        if (usb[port].DevStatusFS2HS == FALSE)
         {
-          pD = (USB_COMMON_DESCRIPTOR *) USB_FSConfigDescriptor;
+          pD = (USB_COMMON_DESCRIPTOR *) usb[port].FSConfigDescriptor;
         }
         else
         {
-          pD = (USB_COMMON_DESCRIPTOR *) USB_HSConfigDescriptor;
+          pD = (USB_COMMON_DESCRIPTOR *) usb[port].HSConfigDescriptor;
         }
         while (pD->bLength)
         {
           switch (pD->bDescriptorType)
           {
             case USB_CONFIGURATION_DESCRIPTOR_TYPE:
-              if (((USB_CONFIGURATION_DESCRIPTOR *) pD)->bConfigurationValue == SetupPacket.wValue.WB.L)
+              if (((USB_CONFIGURATION_DESCRIPTOR *) pD)->bConfigurationValue == usb[port].SetupPacket.wValue.WB.L)
               {
-                USB_Configuration = SetupPacket.wValue.WB.L;
-                USB_NumInterfaces = ((USB_CONFIGURATION_DESCRIPTOR *) pD)->bNumInterfaces;
+                usb[port].Configuration = usb[port].SetupPacket.wValue.WB.L;
+                usb[port].NumInterfaces = ((USB_CONFIGURATION_DESCRIPTOR *) pD)->bNumInterfaces;
                 for (n = 0; n < USB_IF_NUM; n++)
                 {
-                  USB_AltSetting[n] = 0;
+                  usb[port].AltSetting[n] = 0;
                 }
                 for (n = 1; n < USB_EP_NUM; n++)
                 {
-                  if (USB_EndPointMask & (1 << n))
+                  if (usb[port].EndPointMask & (1 << n))
                   {
-                    USB_DisableEP(n);
+                    DisableEP(port, n);
                   }
-                  if (USB_EndPointMask & ((1 << 16) << n))
+                  if (usb[port].EndPointMask & ((1 << 16) << n))
                   {
-                    USB_DisableEP(n | 0x80);
+                    DisableEP(port, n | 0x80);
                   }
                 }
-                USB_EndPointMask  = 0x00010001;
-                USB_EndPointHalt  = 0x00000000;
-                USB_EndPointStall = 0x00000000;
-                USB_Configure(TRUE);
+                usb[port].EndPointMask  = 0x00010001;
+                usb[port].EndPointHalt  = 0x00000000;
+                usb[port].EndPointStall = 0x00000000;
+                Configure(TRUE);
                 if (((USB_CONFIGURATION_DESCRIPTOR *) pD)->bmAttributes & USB_CONFIG_POWERED_MASK)
                 {
-                  USB_DeviceStatus |= USB_GETSTATUS_SELF_POWERED;
+                  usb[port].DeviceStatus |= USB_GETSTATUS_SELF_POWERED;
                 }
                 else
                 {
-                  USB_DeviceStatus &= ~USB_GETSTATUS_SELF_POWERED;
+                  usb[port].DeviceStatus &= ~USB_GETSTATUS_SELF_POWERED;
                 }
               }
               else
@@ -975,10 +988,10 @@ uint32_t USBA_ReqSetConfiguration(void)
               {
                 n = ((USB_ENDPOINT_DESCRIPTOR *) pD)->bEndpointAddress & 0x8F;
                 m = (n & 0x80) ? ((1 << 16) << (n & 0x0F)) : (1 << n);
-                USB_EndPointMask |= m;
-                USB_ConfigEP((USB_ENDPOINT_DESCRIPTOR *) pD);
-                USB_EnableEP(n);
-                USBA_ResetEP(n);
+                usb[port].EndPointMask |= m;
+                ConfigEP(port, (USB_ENDPOINT_DESCRIPTOR *) pD);
+                EnableEP(port, n);
+                USB_ResetEP(port, n);
               }
               break;
           }
@@ -988,25 +1001,25 @@ uint32_t USBA_ReqSetConfiguration(void)
       }
       else
       {
-        USB_Configuration = 0;
+        usb[port].Configuration = 0;
         for (n = 1; n < USB_EP_NUM; n++)
         {
-          if (USB_EndPointMask & (1 << n))
+          if (usb[port].EndPointMask & (1 << n))
           {
-            USB_DisableEP(n);
+            DisableEP(port, n);
           }
-          if (USB_EndPointMask & ((1 << 16) << n))
+          if (usb[port].EndPointMask & ((1 << 16) << n))
           {
-            USB_DisableEP(n | 0x80);
+            DisableEP(port, n | 0x80);
           }
         }
-        USB_EndPointMask  = 0x00010001;
-        USB_EndPointHalt  = 0x00000000;
-        USB_EndPointStall = 0x00000000;
-        USB_Configure(FALSE);
+        usb[port].EndPointMask  = 0x00010001;
+        usb[port].EndPointHalt  = 0x00000000;
+        usb[port].EndPointStall = 0x00000000;
+        Configure(FALSE);
       }
 
-      if (USB_Configuration != SetupPacket.wValue.WB.L)
+      if (usb[port].Configuration != usb[port].SetupPacket.wValue.WB.L)
       {
         return (FALSE);
       }
@@ -1021,15 +1034,15 @@ uint32_t USBA_ReqSetConfiguration(void)
 /** @brief		Get Interface USB request
     @return		TRUE - success; FALSE - error
 *******************************************************************************/
-uint32_t USBA_ReqGetInterface(void)
+uint32_t USB_ReqGetInterface(uint8_t const port)
 {
 
-  switch (SetupPacket.bmRequestType.BM.Recipient)
+  switch (usb[port].SetupPacket.bmRequestType.BM.Recipient)
   {
     case REQUEST_TO_INTERFACE:
-      if ((USB_Configuration != 0) && (SetupPacket.wIndex.WB.L < USB_NumInterfaces))
+      if ((usb[port].Configuration != 0) && (usb[port].SetupPacket.wIndex.WB.L < usb[port].NumInterfaces))
       {
-        EP0Data.pData = USB_AltSetting + SetupPacket.wIndex.WB.L;
+        usb[port].EP0Data.pData = usb[port].AltSetting + usb[port].SetupPacket.wIndex.WB.L;
       }
       else
       {
@@ -1046,33 +1059,33 @@ uint32_t USBA_ReqGetInterface(void)
 /** @brief		Set Interface USB request
     @return		TRUE - success; FALSE - error
 *******************************************************************************/
-uint32_t USBA_ReqSetInterface(void)
+uint32_t USB_ReqSetInterface(uint8_t const port)
 {
   USB_COMMON_DESCRIPTOR *pD;
   uint32_t               ifn = 0, alt = 0, old = 0, msk = 0;
   uint32_t               n, m;
   uint32_t               set, new_addr;
 
-  switch (SetupPacket.bmRequestType.BM.Recipient)
+  switch (usb[port].SetupPacket.bmRequestType.BM.Recipient)
   {
     case REQUEST_TO_INTERFACE:
-      if (USB_Configuration == 0)
+      if (usb[port].Configuration == 0)
         return (FALSE);
       set = FALSE;
-      if (DevStatusFS2HS == FALSE)
+      if (usb[port].DevStatusFS2HS == FALSE)
       {
-        pD = (USB_COMMON_DESCRIPTOR *) USB_FSConfigDescriptor;
+        pD = (USB_COMMON_DESCRIPTOR *) usb[port].FSConfigDescriptor;
       }
       else
       {
-        pD = (USB_COMMON_DESCRIPTOR *) USB_HSConfigDescriptor;
+        pD = (USB_COMMON_DESCRIPTOR *) usb[port].HSConfigDescriptor;
       }
       while (pD->bLength)
       {
         switch (pD->bDescriptorType)
         {
           case USB_CONFIGURATION_DESCRIPTOR_TYPE:
-            if (((USB_CONFIGURATION_DESCRIPTOR *) pD)->bConfigurationValue != USB_Configuration)
+            if (((USB_CONFIGURATION_DESCRIPTOR *) pD)->bConfigurationValue != usb[port].Configuration)
             {
               new_addr = (uint32_t) pD + ((USB_CONFIGURATION_DESCRIPTOR *) pD)->wTotalLength;
               pD       = (USB_COMMON_DESCRIPTOR *) new_addr;
@@ -1083,32 +1096,32 @@ uint32_t USBA_ReqSetInterface(void)
             ifn = ((USB_INTERFACE_DESCRIPTOR *) pD)->bInterfaceNumber;
             alt = ((USB_INTERFACE_DESCRIPTOR *) pD)->bAlternateSetting;
             msk = 0;
-            if ((ifn == SetupPacket.wIndex.WB.L) && (alt == SetupPacket.wValue.WB.L))
+            if ((ifn == usb[port].SetupPacket.wIndex.WB.L) && (alt == usb[port].SetupPacket.wValue.WB.L))
             {
-              set                 = TRUE;
-              old                 = USB_AltSetting[ifn];
-              USB_AltSetting[ifn] = (uint8_t) alt;
+              set                       = TRUE;
+              old                       = usb[port].AltSetting[ifn];
+              usb[port].AltSetting[ifn] = (uint8_t) alt;
             }
             break;
           case USB_ENDPOINT_DESCRIPTOR_TYPE:
-            if (ifn == SetupPacket.wIndex.WB.L)
+            if (ifn == usb[port].SetupPacket.wIndex.WB.L)
             {
               n = ((USB_ENDPOINT_DESCRIPTOR *) pD)->bEndpointAddress & 0x8F;
               m = (n & 0x80) ? ((1 << 16) << (n & 0x0F)) : (1 << n);
-              if (alt == SetupPacket.wValue.WB.L)
+              if (alt == usb[port].SetupPacket.wValue.WB.L)
               {
-                USB_EndPointMask |= m;
-                USB_EndPointHalt &= ~m;
-                USB_ConfigEP((USB_ENDPOINT_DESCRIPTOR *) pD);
-                USB_EnableEP(n);
-                USBA_ResetEP(n);
+                usb[port].EndPointMask |= m;
+                usb[port].EndPointHalt &= ~m;
+                ConfigEP(port, (USB_ENDPOINT_DESCRIPTOR *) pD);
+                EnableEP(port, n);
+                USB_ResetEP(port, n);
                 msk |= m;
               }
               else if ((alt == old) && ((msk & m) == 0))
               {
-                USB_EndPointMask &= ~m;
-                USB_EndPointHalt &= ~m;
-                USB_DisableEP(n);
+                usb[port].EndPointMask &= ~m;
+                usb[port].EndPointHalt &= ~m;
+                DisableEP(port, n);
               }
             }
             break;
@@ -1128,108 +1141,106 @@ uint32_t USBA_ReqSetInterface(void)
 /** @brief		Endpoint 0 Callback
     @param[in]	event	Event that triggered the interrupt
 *******************************************************************************/
-static void USB_EndPoint0(uint32_t event)
+static void EndPoint0(uint8_t const port, uint32_t const event)
 {
   switch (event)
   {
     case USB_EVT_SETUP:
-      USBA_SetupStage();
-      USB_DirCtrlEP(SetupPacket.bmRequestType.BM.Dir);
-      EP0Data.Count = SetupPacket.wLength; /* Number of bytes to transfer */
-      switch (SetupPacket.bmRequestType.BM.Type)
+      SetupStage(port);
+      DirCtrlEP(usb[port].SetupPacket.bmRequestType.BM.Dir);
+      usb[port].EP0Data.Count = usb[port].SetupPacket.wLength; /* Number of bytes to transfer */
+      switch (usb[port].SetupPacket.bmRequestType.BM.Type)
       {
 
         case REQUEST_STANDARD:
-          switch (SetupPacket.bRequest)
+          switch (usb[port].SetupPacket.bRequest)
           {
             case USB_REQUEST_GET_STATUS:
-              if (!USBA_ReqGetStatus())
+              if (!USB_ReqGetStatus(port))
               {
                 goto stall_i;
               }
-              USBA_DataInStage();
+              DataInStage(port);
               break;
 
             case USB_REQUEST_CLEAR_FEATURE:
-              if (!USBA_ReqSetClrFeature(0))
+              if (ReqSetClrFeature(port, 0))
               {
                 goto stall_i;
               }
-              USBA_StatusInStage();
+              StatusInStage(port);
 #if USB_FEATURE_EVENT
-              USB_Feature_Event();
+              USB_Feature_Event(port);
 #endif
               break;
 
             case USB_REQUEST_SET_FEATURE:
-              if (!USBA_ReqSetClrFeature(1))
+              if (!ReqSetClrFeature(port, 1))
               {
                 goto stall_i;
               }
-              USBA_StatusInStage();
+              StatusInStage(port);
 #if USB_FEATURE_EVENT
-              USB_Feature_Event();
+              USB_Feature_Event(port);
 #endif
               break;
 
             case USB_REQUEST_SET_ADDRESS:
-              if (!USBA_ReqSetAddress())
+              if (!USB_ReqSetAddress(port))
               {
                 goto stall_i;
               }
-              USBA_StatusInStage();
+              StatusInStage(port);
               break;
 
             case USB_REQUEST_GET_DESCRIPTOR:
-              if (!USBA_ReqGetDescriptor())
+              if (!USB_ReqGetDescriptor(port))
               {
                 goto stall_i;
               }
-              USBA_DataInStage();
+              DataInStage(port);
               break;
 
             case USB_REQUEST_SET_DESCRIPTOR:
-              /*stall_o:*/ USB_SetStallEP(0x00); /* not supported */
-              EP0Data.Count = 0;
+              /*stall_o:*/ SetStallEP(port, 0x00); /* not supported */
+              usb[port].EP0Data.Count = 0;
               break;
 
             case USB_REQUEST_GET_CONFIGURATION:
-              if (!USBA_ReqGetConfiguration())
+              if (USB_ReqGetConfiguration(port))
               {
                 goto stall_i;
               }
-              USBA_DataInStage();
+              DataInStage(port);
               break;
 
             case USB_REQUEST_SET_CONFIGURATION:
-              if (!USBA_ReqSetConfiguration())
+              if (!USB_ReqSetConfiguration(port))
               {
                 goto stall_i;
               }
-              USBA_StatusInStage();
+              StatusInStage(port);
 #if USB_CONFIGURE_EVENT
-              USB_Configure_Event();
+              USB_Configure_Event(port);
 #endif
               break;
 
             case USB_REQUEST_GET_INTERFACE:
-              if (!USBA_ReqGetInterface())
+              if (!USB_ReqGetInterface(port))
               {
                 goto stall_i;
               }
-              USBA_DataInStage();
+              DataInStage(port);
               break;
 
             case USB_REQUEST_SET_INTERFACE:
-              if (!USBA_ReqSetInterface())
+              if (!USB_ReqSetInterface(port))
               {
                 goto stall_i;
               }
-              USBA_StatusInStage();
-#if 1
-              if (USB_Interface_Event)
-                USB_Interface_Event(&SetupPacket);
-#endif
+              StatusInStage(port);
+              if (usb[port].Interface_Event)
+                usb[port].Interface_Event(port, &usb[port].SetupPacket);
               break;
 
             default:
@@ -1238,49 +1249,49 @@ static void USB_EndPoint0(uint32_t event)
           break; /* end case REQUEST_STANDARD */
 
         case REQUEST_CLASS:
-          if (USB_Class_Specific_Request)
+          if (usb[port].Class_Specific_Request)
           {
-            if (USB_Class_Specific_Request(&SetupPacket, &EP0Data, event))
+            if (usb[port].Class_Specific_Request(port, &usb[port].SetupPacket, &usb[port].EP0Data, event))
               goto stall_i;
           }
           break; /* end case REQUEST_CLASS */
         default:
         stall_i:
-          USB_SetStallEP(0x80);
-          EP0Data.Count = 0;
+          SetStallEP(port, 0x80);
+          usb[port].EP0Data.Count = 0;
           break;
       }
       break; /* end case USB_EVT_SETUP */
 
     case USB_EVT_OUT_NAK:
-      if (SetupPacket.bmRequestType.BM.Dir == 0)
+      if (usb[port].SetupPacket.bmRequestType.BM.Dir == 0)
       {
-        USBA_ReadReqEP(0x00, EP0Data.pData, EP0Data.Count);
+        USB_ReadReqEP(port, 0x00, usb[port].EP0Data.pData, usb[port].EP0Data.Count);
       }
       else
       {
         /* might be zero length pkt */
-        USBA_ReadReqEP(0x00, EP0Data.pData, 0);
+        USB_ReadReqEP(port, 0x00, usb[port].EP0Data.pData, 0);
       }
       break;
     case USB_EVT_OUT:
-      if (SetupPacket.bmRequestType.BM.Dir == REQUEST_HOST_TO_DEVICE)
+      if (usb[port].SetupPacket.bmRequestType.BM.Dir == REQUEST_HOST_TO_DEVICE)
       {
-        if (EP0Data.Count)
-        {                      /* still data to receive ? */
-          USBA_DataOutStage(); /* receive data */
-          if (EP0Data.Count == 0)
+        if (usb[port].EP0Data.Count)
+        {                     /* still data to receive ? */
+          DataOutStage(port); /* receive data */
+          if (usb[port].EP0Data.Count == 0)
           { /* data complete ? */
-            switch (SetupPacket.bmRequestType.BM.Type)
+            switch (usb[port].SetupPacket.bmRequestType.BM.Type)
             {
 
               case REQUEST_STANDARD:
                 goto stall_i;
                 break; /* not supported */
               case REQUEST_CLASS:
-                if (USB_Class_Specific_Request)
+                if (usb[port].Class_Specific_Request)
                 {
-                  if (USB_Class_Specific_Request(&SetupPacket, &EP0Data, event))
+                  if (usb[port].Class_Specific_Request(port, &usb[port].SetupPacket, &usb[port].EP0Data, event))
                     goto stall_i;
                 }
                 break;
@@ -1292,143 +1303,137 @@ static void USB_EndPoint0(uint32_t event)
       }
       else
       {
-        USBA_StatusOutStage(); /* receive Acknowledge */
+        StatusOutStage(port); /* receive Acknowledge */
       }
       break; /* end case USB_EVT_OUT */
 
     case USB_EVT_IN:
-      if (SetupPacket.bmRequestType.BM.Dir == REQUEST_DEVICE_TO_HOST)
+      if (usb[port].SetupPacket.bmRequestType.BM.Dir == REQUEST_DEVICE_TO_HOST)
       {
-        USBA_DataInStage(); /* send data */
+        DataInStage(port); /* send data */
       }
       else
       {
-        if (USB_DeviceAddress & 0x80)
+        if (usb[port].DeviceAddress & 0x80)
         {
-          USB_DeviceAddress &= 0x7F;
-          USB_SetAddress(USB_DeviceAddress);
+          usb[port].DeviceAddress &= 0x7F;
+          SetAddress(port, usb[port].DeviceAddress);
         }
       }
       break; /* end case USB_EVT_IN */
 
     case USB_EVT_OUT_STALL:
-      USB_ClrStallEP(0x00);
+      ClrStallEP(port, 0x00);
       break;
 
     case USB_EVT_IN_STALL:
-      USB_ClrStallEP(0x80);
+      ClrStallEP(port, 0x80);
       break;
   }
 }
 
-/******************************************************************************/
-/** @brief		USB Interrupt Service Routine
-*******************************************************************************/
-#if USBA_PORT_FOR_MIDI == 0
-void USB0_IRQHandler(void)
-#else
-void USB1_IRQHandler(void)
-#endif
+static inline void Handler(uint8_t const port)
 {
   uint32_t disr, val, n;
 
-  disr               = LPC_USBA->USBSTS_D; /* Device Interrupt Status */
-  LPC_USBA->USBSTS_D = disr;
+  disr                         = usb[port].hardware->USBSTS_D; /* Device Interrupt Status */
+  usb[port].hardware->USBSTS_D = disr;
 
   /* Device Status Interrupt (Reset, Connect change, Suspend/Resume) */
   if (disr & USBSTS_URI) /* Reset */
   {
-    USB_Reset();
-    USBA_ResetCore();
-    // indicate general activity
+    Reset(port);
+    USB_ResetCore(port);
     return;
   }
 
   if (disr & USBSTS_SLI) /* Suspend */
   {
-    activity = 1;
+    usb[port].activity              = 1;
+    usb[port].connectionEstablished = 0;
   }
 
   if (disr & USBSTS_PCI) /* Resume */
   {
-    activity = 1;
+    usb[port].activity              = 1;
+    usb[port].connectionEstablished = 1;
     /* check if device is operating in HS mode or full speed */
-    if (LPC_USBA->PORTSC1_D & (1 << 9))
-      DevStatusFS2HS = TRUE;
+    if (usb[port].hardware->PORTSC1_D & (1 << 9))
+      usb[port].DevStatusFS2HS = TRUE;
   }
 
   /* handle setup status interrupts */
-  val = LPC_USBA->ENDPTSETUPSTAT;
+  val = usb[port].hardware->ENDPTSETUPSTAT;
   /* Only EP0 will have setup packets so call EP0 handler */
   if (val)
   {
-    activity = 1;
+    usb[port].activity = 1;
     /* Clear the endpoint complete CTRL OUT & IN when */
     /* a Setup is received */
-    LPC_USBA->ENDPTCOMPLETE = 0x00010001;
+    usb[port].hardware->ENDPTCOMPLETE = 0x00010001;
     /* enable NAK inetrrupts */
-    LPC_USBA->ENDPTNAKEN |= 0x00010001;
+    usb[port].hardware->ENDPTNAKEN |= 0x00010001;
 
-    USB_P_EP[0](USB_EVT_SETUP);
+    usb[port].P_EPCallback[0](port, USB_EVT_SETUP);
   }
 
   /* handle completion interrupts */
-  val = LPC_USBA->ENDPTCOMPLETE;
+  val = usb[port].hardware->ENDPTCOMPLETE;
   if (val)
   {
-    activity           = 1;
-    LPC_USBA->ENDPTNAK = val;
+    usb[port].activity           = 1;
+    usb[port].hardware->ENDPTNAK = val;
 
     /* EP 0 - OUT */
     if (val & 1)
     {
-      LPC_USBA->ENDPTCOMPLETE = 1;
-      USB_P_EP[0](USB_EVT_OUT);
+      usb[port].hardware->ENDPTCOMPLETE = 1;
+      usb[port].P_EPCallback[0](port, USB_EVT_OUT);
     }
     /* EP 0 - IN */
     if (val & (1 << 16))
     {
-      ep_TD[1].total_bytes &= 0xC0;
-      LPC_USBA->ENDPTCOMPLETE = (1 << 16);
-      USB_P_EP[0](USB_EVT_IN);
+      usb[port].ep_TD[1].total_bytes &= 0xC0;
+      usb[port].hardware->ENDPTCOMPLETE = (1 << 16);
+      usb[port].P_EPCallback[0](port, USB_EVT_IN);
     }
     /* EP 1 - OUT */
     if (val & 2)
     {
-      LPC_USBA->ENDPTCOMPLETE = 2;
-      USB_P_EP[1](USB_EVT_OUT);
+      usb[port].hardware->ENDPTCOMPLETE = 2;
+      usb[port].P_EPCallback[1](port, USB_EVT_OUT);
     }
     /* EP 1 - IN */
     if (val & (1 << 17))
     {
-      ep_TD[3].total_bytes &= 0xC0;
-      LPC_USBA->ENDPTCOMPLETE = (1 << 17);
-      USB_P_EP[1](USB_EVT_IN);
+      usb[port].ep_TD[3].total_bytes &= 0xC0;
+      usb[port].hardware->ENDPTCOMPLETE = (1 << 17);
+      usb[port].P_EPCallback[1](port, USB_EVT_IN);
     }
     /* EP 2 - IN */
     if (val & (1 << 18))
     {
-      ep_TD[5].total_bytes &= 0xC0;
-      LPC_USBA->ENDPTCOMPLETE = (1 << 18);
-      USB_P_EP[2](USB_EVT_IN);
+      usb[port].ep_TD[5].total_bytes &= 0xC0;
+      usb[port].hardware->ENDPTCOMPLETE = (1 << 18);
+      usb[port].P_EPCallback[2](port, USB_EVT_IN);
     }
   }
 
   if (disr & USBSTS_NAKI)
   {
-    val = LPC_USBA->ENDPTNAK;
-    val &= LPC_USBA->ENDPTNAKEN;
+    val = usb[port].hardware->ENDPTNAK;
+    val &= usb[port].hardware->ENDPTNAKEN;
     /* handle NAK interrupts */
     if (val)
     {
-      activity           = 1;
-      LPC_USBA->ENDPTNAK = val;
+      usb[port].activity           = 1;
+      usb[port].hardware->ENDPTNAK = val;
       for (n = 0; n < EP_NUM_MAX / 2; n++)
       {
         if (val & (1 << n))
-          USB_P_EP[n](USB_EVT_OUT_NAK);
+          usb[port].P_EPCallback[n](port, USB_EVT_OUT_NAK);
         if (val & (1 << (n + 16)))
-          USB_P_EP[n](USB_EVT_IN_NAK);
+          usb[port].P_EPCallback[n](port, USB_EVT_IN_NAK);
       }
     }
   }
@@ -1436,17 +1441,17 @@ void USB1_IRQHandler(void)
   /* Start of Frame Interrupt */
   if (disr & USBSTS_SRI)
   {
-    if (USB_SOF_Event)
-      USB_SOF_Event();
+    if (usb[port].SOF_Event)
+      usb[port].SOF_Event(port);
   }
 
   /* Error Interrupt */
   if (disr & USBSTS_UEI)
   {
-    activity = 1;
+    usb[port].activity = 1;
   }
 
-  if (activity)
+  if (usb[port].activity)
     ;  // indicate general activity
   return;
 }
@@ -1457,11 +1462,11 @@ void USB1_IRQHandler(void)
     @param[in]	ptrBuff	Pointer to data buffer
     @param[in]	TsfSize	Size of the transfer buffer
 *******************************************************************************/
-void USBA_ProgDTD(uint32_t Edpt, uint32_t ptrBuff, uint32_t TsfSize)
+void USB_ProgDTD(uint8_t const port, uint32_t Edpt, uint32_t ptrBuff, uint32_t TsfSize)
 {
   DTD_T *pDTD;
 
-  pDTD = (DTD_T *) &ep_TD[Edpt];
+  pDTD = (DTD_T *) &usb[port].ep_TD[Edpt];
 
   /* Zero out the device transfer descriptors */
   memset((void *) pDTD, 0, sizeof(DTD_T));
@@ -1479,8 +1484,8 @@ void USBA_ProgDTD(uint32_t Edpt, uint32_t ptrBuff, uint32_t TsfSize)
   pDTD->buffer3 = (ptrBuff + 0x3000) & 0xfffff000;
   pDTD->buffer4 = (ptrBuff + 0x4000) & 0xfffff000;
 
-  ep_QH[Edpt].next_dTD = (uint32_t)(&ep_TD[Edpt]);
-  ep_QH[Edpt].total_bytes &= (~0xC0);
+  usb[port].ep_QH[Edpt].next_dTD = (uint32_t)(&usb[port].ep_TD[Edpt]);
+  usb[port].ep_QH[Edpt].total_bytes &= (~0xC0);
 }
 
 /******************************************************************************/
@@ -1492,13 +1497,13 @@ void USBA_ProgDTD(uint32_t Edpt, uint32_t ptrBuff, uint32_t TsfSize)
     @param[in]	cnt		Number of bytes to write
     @return		Number of bytes written
 *******************************************************************************/
-uint32_t USBA_WriteEP(uint32_t EPNum, uint8_t *pData, uint32_t cnt)
+uint32_t USB_WriteEP(uint8_t const port, uint32_t EPNum, uint8_t *pData, uint32_t cnt)
 {
   uint32_t n = USB_EP_BITPOS(EPNum);
 
-  USBA_ProgDTD(EPAdr(EPNum), (uint32_t) pData, cnt);
+  USB_ProgDTD(port, EPAdr(EPNum), (uint32_t) pData, cnt);
   /* prime the endpoint for transmit */
-  LPC_USBA->ENDPTPRIME |= (1 << n);
+  usb[port].hardware->ENDPTPRIME |= (1 << n);
 
   return (cnt);
 }
@@ -1511,17 +1516,17 @@ uint32_t USBA_WriteEP(uint32_t EPNum, uint8_t *pData, uint32_t cnt)
     @param[in]	pData	Pointer to data buffer
     @return		Number of bytes read
 *******************************************************************************/
-uint32_t USBA_ReadEP(uint32_t EPNum, uint8_t *pData)
+uint32_t USB_ReadEP(uint8_t const port, uint32_t EPNum, uint8_t *pData)
 {
   uint32_t cnt, n;
   DTD_T *  pDTD;
 
   n    = EPAdr(EPNum);
-  pDTD = (DTD_T *) &ep_TD[n];
+  pDTD = (DTD_T *) &(usb[port].ep_TD[n]);
 
   /* return the total bytes read */
   cnt = (pDTD->total_bytes >> 16) & 0x7FFF;
-  cnt = ep_read_len[EPNum & 0x0F] - cnt;
+  cnt = usb[port].ep_read_len[EPNum & 0x0F] - cnt;
   return (cnt);
 }
 
@@ -1534,15 +1539,15 @@ uint32_t USBA_ReadEP(uint32_t EPNum, uint8_t *pData)
     @param[in]	len		Length of the data buffer
     @return		Length of the data buffer
 *******************************************************************************/
-uint32_t USBA_ReadReqEP(uint32_t EPNum, uint8_t *pData, uint32_t len)
+uint32_t USB_ReadReqEP(uint8_t const port, uint32_t EPNum, uint8_t *pData, uint32_t len)
 {
   uint32_t num = EPAdr(EPNum);
   uint32_t n   = USB_EP_BITPOS(EPNum);
 
-  USBA_ProgDTD(num, (uint32_t) pData, len);
-  ep_read_len[EPNum & 0x0F] = len;
+  USB_ProgDTD(port, num, (uint32_t) pData, len);
+  usb[port].ep_read_len[EPNum & 0x0F] = len;
   /* prime the endpoint for read */
-  LPC_USBA->ENDPTPRIME |= (1 << n);
+  usb[port].hardware->ENDPTPRIME |= (1 << n);
   return len;
 }
 
@@ -1554,52 +1559,64 @@ uint32_t USBA_ReadReqEP(uint32_t EPNum, uint8_t *pData, uint32_t len)
     					3:0	Endpoint number
     @return		Number of bytes left to be sent
 *******************************************************************************/
-uint32_t USBA_Core_BytesToSend(uint32_t endbuff, uint32_t ep)
+int32_t USB_Core_BytesToSend(uint8_t const port, uint32_t endbuff, uint32_t ep)
 {
-  uint32_t x = ep_QH[EPAdr(ep)].buffer0;
+  uint32_t x = usb[port].ep_QH[EPAdr(ep)].buffer0;
   if (x == 0)  // seems to fix the "USB reconnect traffic jam"
-    return 0;
+    return -1;
   return ((endbuff - x) & 0xFFF);
 }
 
-void USBA_Core_Device_Descriptor_Set(const uint8_t *ddesc)
+void USB_Core_Device_Descriptor_Set(uint8_t const port, const uint8_t *ddesc)
 {
-  USB_DeviceDescriptor = ddesc;
+  usb[port].DeviceDescriptor = ddesc;
 }
 
-void USBA_Core_Device_FS_Descriptor_Set(const uint8_t *fsdesc)
+void USB_Core_Device_FS_Descriptor_Set(uint8_t const port, const uint8_t *fsdesc)
 {
-  USB_FSConfigDescriptor        = fsdesc;
-  USB_FSOtherSpeedConfiguration = fsdesc;
+  usb[port].FSConfigDescriptor        = fsdesc;
+  usb[port].FSOtherSpeedConfiguration = fsdesc;
 }
 
-void USBA_Core_Device_HS_Descriptor_Set(const uint8_t *hsdesc)
+void USB_Core_Device_HS_Descriptor_Set(uint8_t const port, const uint8_t *hsdesc)
 {
-  USB_HSConfigDescriptor        = hsdesc;
-  USB_HSOtherSpeedConfiguration = hsdesc;
+  usb[port].HSConfigDescriptor        = hsdesc;
+  usb[port].HSOtherSpeedConfiguration = hsdesc;
 }
 
-void USBA_Core_Device_String_Descriptor_Set(const uint8_t *strdesc)
+void USB_Core_Device_String_Descriptor_Set(uint8_t const port, const uint8_t *strdesc)
 {
-  USB_StringDescriptor = strdesc;
+  usb[port].StringDescriptor = strdesc;
 }
 
-void USBA_Core_Device_Device_Quali_Descriptor_Set(const uint8_t *dqdesc)
+void USB_Core_Device_Device_Quali_Descriptor_Set(uint8_t const port, const uint8_t *dqdesc)
 {
-  USB_DeviceQualifier = dqdesc;
+  usb[port].DeviceQualifier = dqdesc;
 }
 
-void USBA_Core_Interface_Event_Handler_Set(InterfaceEventHandler ievh)
+void USB_Core_Interface_Event_Handler_Set(uint8_t const port, InterfaceEventHandler ievh)
 {
-  USB_Interface_Event = ievh;
+  usb[port].Interface_Event = ievh;
 }
 
-void USBA_Core_Class_Request_Handler_Set(ClassRequestHandler csrqh)
+void USB_Core_Class_Request_Handler_Set(uint8_t const port, ClassRequestHandler csrqh)
 {
-  USB_Class_Specific_Request = csrqh;
+  usb[port].Class_Specific_Request = csrqh;
 }
 
-void USBA_Core_SOF_Event_Handler_Set(SOFHandler sofh)
+void USB_Core_SOF_Event_Handler_Set(uint8_t const port, SOFHandler sofh)
 {
-  USB_SOF_Event = sofh;
+  usb[port].SOF_Event = sofh;
+}
+
+/******************************************************************************/
+/** @brief		USB Interrupt Service Routine
+*******************************************************************************/
+void USB0_IRQHandler(void)
+{
+  Handler(0);
+}
+void USB1_IRQHandler(void)
+{
+  Handler(1);
 }

@@ -25,18 +25,18 @@
 /* USB Endpoint Data Structure */
 typedef struct _USB_EP_DATA
 {
-  uint8_t* pData;
+  uint8_t *pData;
   uint16_t Count;
 } USB_EP_DATA;
 
 /* Definition for Endpoint Callback function */
-typedef void (*EndpointCallback)(uint32_t event);
+typedef void (*EndpointCallback)(uint8_t const port, uint32_t event);
 /* Definition for the Interface Event handler function */
-typedef void (*InterfaceEventHandler)(USB_SETUP_PACKET* spkt);
+typedef void (*InterfaceEventHandler)(uint8_t const port, USB_SETUP_PACKET *spkt);
 /* Definition for the Class-specific request handler function */
-typedef uint8_t (*ClassRequestHandler)(USB_SETUP_PACKET* spkt, USB_EP_DATA* ep0dat, uint32_t event);
+typedef uint8_t (*ClassRequestHandler)(uint8_t const port, USB_SETUP_PACKET *spkt, USB_EP_DATA *ep0dat, uint32_t event);
 /* Definition for the Start of Frame handler */
-typedef void (*SOFHandler)(void);
+typedef void (*SOFHandler)(uint8_t const port);
 
 /** dTD Transfer Descriptor */
 typedef volatile struct
@@ -208,3 +208,36 @@ typedef volatile struct
 /** Interrupt on complete */
 #define TD_IOC (1 << 15)
 /** @} */
+
+void     USB_Core_Init(uint8_t const port);
+uint8_t  USB_GetActivity(uint8_t const port);
+uint8_t  USB_SetupComplete(uint8_t const port);
+void     USB_Core_DeInit(uint8_t const port);
+void     USB_Core_ForceFullSpeed(uint8_t const port);
+void     USB_Core_Endpoint_Callback_Set(uint8_t const port, uint8_t const ep, EndpointCallback const cb);
+uint8_t  USB_Core_IsConfigured(uint8_t const port);
+uint8_t  USB_Core_ReadyToWrite(uint8_t const port, uint8_t const epnum);
+void     USB_ResetCore(uint8_t const port);
+uint32_t USB_ReqGetStatus(uint8_t const port);
+uint32_t USB_ReqSetAddress(uint8_t const port);
+uint32_t USB_ReqGetDescriptor(uint8_t const port);
+void     USB_ResetEP(uint8_t const port, uint32_t const EPNum);
+uint32_t USB_ReqGetConfiguration(uint8_t const port);
+uint32_t USB_ReqSetConfiguration(uint8_t const port);
+uint32_t USB_ReqGetInterface(uint8_t const port);
+uint32_t USB_ReqSetInterface(uint8_t const port);
+void     USB0_IRQHandler(void);
+void     USB1_IRQHandler(void);
+void     USB_ProgDTD(uint8_t const port, uint32_t Edpt, uint32_t ptrBuff, uint32_t TsfSize);
+uint32_t USB_WriteEP(uint8_t const port, uint32_t EPNum, uint8_t *pData, uint32_t cnt);
+uint32_t USB_ReadEP(uint8_t const port, uint32_t EPNum, uint8_t *pData);
+uint32_t USB_ReadReqEP(uint8_t const port, uint32_t EPNum, uint8_t *pData, uint32_t len);
+int32_t  USB_Core_BytesToSend(uint8_t const port, uint32_t endbuff, uint32_t ep);
+void     USB_Core_Device_Descriptor_Set(uint8_t const port, const uint8_t *ddesc);
+void     USB_Core_Device_FS_Descriptor_Set(uint8_t const port, const uint8_t *fsdesc);
+void     USB_Core_Device_HS_Descriptor_Set(uint8_t const port, const uint8_t *hsdesc);
+void     USB_Core_Device_String_Descriptor_Set(uint8_t const port, const uint8_t *strdesc);
+void     USB_Core_Device_Device_Quali_Descriptor_Set(uint8_t const port, const uint8_t *dqdesc);
+void     USB_Core_Interface_Event_Handler_Set(uint8_t const port, InterfaceEventHandler ievh);
+void     USB_Core_Class_Request_Handler_Set(uint8_t const port, ClassRequestHandler csrqh);
+void     USB_Core_SOF_Event_Handler_Set(uint8_t const port, SOFHandler sofh);
