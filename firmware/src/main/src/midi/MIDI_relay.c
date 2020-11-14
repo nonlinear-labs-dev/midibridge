@@ -7,8 +7,8 @@
 #include "drv/nl_leds.h"
 #include "sys/nl_version.h"
 
-#define BUFFER_SIZE            (512)  // same size as low-level MIDI transfer buffers !!
-#define NUMBER_OF_BUFFERS      (8)    // number of buffers, must be 2^N !
+#define TX_BUFFERSIZE          (1024)  // buffer for outgoing messages
+#define NUMBER_OF_BUFFERS      (8)     // number of buffers, must be 2^N !
 #define NUMBER_OF_BUFFERS_MASK (NUMBER_OF_BUFFERS - 1)
 
 #define A (0)
@@ -17,7 +17,7 @@
 // ringbuffer of buffers
 typedef struct
 {
-  uint8_t  buff[NUMBER_OF_BUFFERS][BUFFER_SIZE];
+  uint8_t  buff[NUMBER_OF_BUFFERS][TX_BUFFERSIZE];
   uint16_t bufHead;       // 0..(NUMBER_OF_BUFFERS-1)
   uint16_t bufTail;       // 0..(NUMBER_OF_BUFFERS-1)
   uint16_t bufHeadIndex;  // used bytes in the current head (front) buffer
@@ -49,7 +49,7 @@ static inline int fillBuffer(uint8_t const port, uint8_t *buff, uint32_t len)
     if (*buff < 0x80)
       LED_SetState(port, (*buff & 0xF0) >> 4, (*buff) & 0x02, (*buff) & 0x01);
 #endif
-    if (p->bufHeadIndex >= BUFFER_SIZE)
+    if (p->bufHeadIndex >= TX_BUFFERSIZE)
     {  // current head is full, switch to next one
       uint16_t tmpBufHead = (p->bufHead + 1) & NUMBER_OF_BUFFERS_MASK;
       if (tmpBufHead == p->bufTail)  // no space left ?
@@ -63,18 +63,28 @@ static inline int fillBuffer(uint8_t const port, uint8_t *buff, uint32_t len)
       p->bufHead      = tmpBufHead;
       p->bufHeadIndex = 0;
     }
+
     uint8_t         c = p->buff[p->bufHead][p->bufHeadIndex++] = *(buff++);
-    static uint32_t missed;
+    static uint32_t open, count, firstCount;
     if (c == 0xF0)
-      missed++;
+    {
+      open++;
+      count = 0;
+    }
     if (c == 0xF7)
-      missed--;
-    if (missed != 0 && missed != 1)
+    {
+      open--;
+      if (firstCount == 0)
+        count = firstCount;
+      else if (count != firstCount)
+        LED_DBG3 = 1;
+    }
+    count++;
+    if (open != 0 && open != 1)
       LED_DBG3 = 1;
+
     len--;
   }
-  p->bufHead      = savedBufHead;       // ???
-  p->bufHeadIndex = savedBufHeadIndex;  // ???
   return 1;
 }
 
@@ -91,7 +101,7 @@ static inline void checkSends(uint8_t const port)
 
   if (p->bufHead != p->bufTail)
   {  // send stashed buffers first
-    if (!USB_MIDI_Send(port, p->buff[p->bufTail], BUFFER_SIZE))
+    if (!USB_MIDI_Send(port, p->buff[p->bufTail], TX_BUFFERSIZE))
       ;  //status[port].dataLoss = TIMEOUT_DATALOSS;  // send failed
     else
     {
@@ -115,7 +125,6 @@ static inline void checkSends(uint8_t const port)
 }
 void MIDI_Relay_ProcessFast(void)
 {
-  return;  // ???
   checkSends(A);
   checkSends(B);
 }

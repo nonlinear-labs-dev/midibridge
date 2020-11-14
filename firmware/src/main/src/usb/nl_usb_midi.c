@@ -36,8 +36,10 @@
 #include "sys/globals.h"
 #include "io/pins.h"
 
+#define RX_BUFFERSIZE (4096)
 typedef struct
 {
+  uint8_t         rxBuffer[RX_BUFFERSIZE];
   uint32_t        endOfBuffer;
   MidiRcvCallback MIDI_RcvCallback;
   uint8_t         dropMessages;
@@ -51,17 +53,16 @@ static UsbMidi_t usbMidi[2];
 *******************************************************************************/
 static void EndPoint1(uint8_t const port, uint32_t const event)
 {
-  static uint8_t outbuff[512];
-  uint32_t       length;
+  uint32_t length;
 
   switch (event)
   {
     case USB_EVT_OUT:
-      length = USB_ReadEP(port, 0x01, outbuff);
+      length = USB_ReadEP(port, 0x01, usbMidi[port].rxBuffer);
       if (usbMidi[port].MIDI_RcvCallback)
-        usbMidi[port].MIDI_RcvCallback(port, outbuff, length);
+        usbMidi[port].MIDI_RcvCallback(port, usbMidi[port].rxBuffer, length);
     case USB_EVT_OUT_NAK:
-      USB_ReadReqEP(port, 0x01, outbuff, 512);
+      USB_ReadReqEP(port, 0x01, usbMidi[port].rxBuffer, sizeof(usbMidi[port].rxBuffer));
       break;
   }
 }
