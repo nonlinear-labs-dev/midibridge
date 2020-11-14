@@ -3,7 +3,6 @@
 	<name>main</name>
 	<comment></comment>
 	<projects>
-		<project>co-proc</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

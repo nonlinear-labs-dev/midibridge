@@ -36,10 +36,12 @@
 #include "sys/globals.h"
 #include "io/pins.h"
 
-#define RX_BUFFERSIZE (4096)
+#define RX_BUFFERSIZE (16384)  // 16k is the max buffer USB hardware can handle
+
+__attribute__((section(".noinit.$RamAHB32"))) static uint8_t rxBuffer[2][RX_BUFFERSIZE];
+
 typedef struct
 {
-  uint8_t         rxBuffer[RX_BUFFERSIZE];
   uint32_t        endOfBuffer;
   MidiRcvCallback MIDI_RcvCallback;
   uint8_t         dropMessages;
@@ -58,11 +60,11 @@ static void EndPoint1(uint8_t const port, uint32_t const event)
   switch (event)
   {
     case USB_EVT_OUT:
-      length = USB_ReadEP(port, 0x01, usbMidi[port].rxBuffer);
+      length = USB_ReadEP(port, 0x01, rxBuffer[port]);
       if (usbMidi[port].MIDI_RcvCallback)
-        usbMidi[port].MIDI_RcvCallback(port, usbMidi[port].rxBuffer, length);
+        usbMidi[port].MIDI_RcvCallback(port, rxBuffer[port], length);
     case USB_EVT_OUT_NAK:
-      USB_ReadReqEP(port, 0x01, usbMidi[port].rxBuffer, sizeof(usbMidi[port].rxBuffer));
+      USB_ReadReqEP(port, 0x01, rxBuffer[port], RX_BUFFERSIZE);
       break;
   }
 }
@@ -78,10 +80,6 @@ static void EndPoint2(uint8_t const port, uint32_t const event)
   {
     case USB_EVT_IN_NAK:
     case USB_EVT_IN:  // end of write out
-      if (port == 0)
-        LED_DBG1 = 0;
-      else
-        LED_DBG2 = 0;
       break;
   }
 }
@@ -153,10 +151,6 @@ uint32_t USB_MIDI_Send(uint8_t const port, uint8_t const *const buff, uint32_t c
 
   if (USB_Core_ReadyToWrite(port, 0x82))
   {
-    if (port == 0)
-      LED_DBG1 = 1;
-    else
-      LED_DBG2 = 1;
     USB_WriteEP(port, 0x82, (uint8_t *) buff, (uint32_t) cnt);
     usbMidi[port].endOfBuffer = (uint32_t) buff + cnt;
     return cnt;

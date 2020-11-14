@@ -35,9 +35,8 @@ static void     EndPoint0(uint8_t const port, uint32_t const event);
 static void     Handler(uint8_t const port);
 
 static DQH_T ep_QH_0[EP_NUM_MAX] __attribute__((aligned(2048)));
-static DTD_T ep_TD_0[EP_NUM_MAX] __attribute__((aligned(32)));
-
 static DQH_T ep_QH_1[EP_NUM_MAX] __attribute__((aligned(2048)));
+static DTD_T ep_TD_0[EP_NUM_MAX] __attribute__((aligned(32)));
 static DTD_T ep_TD_1[EP_NUM_MAX] __attribute__((aligned(32)));
 
 #pragma pack(push, 4)
@@ -1349,14 +1348,16 @@ static inline void Handler(uint8_t const port)
 
   if (disr & USBSTS_SLI) /* Suspend */
   {
-    usb[port].activity              = 1;
-    usb[port].connectionEstablished = 0;
+    usb[port].activity                   = 1;
+    usb[port].connectionEstablished      = 0;
+    usb[port].gotConfigDescriptorRequest = 0;
   }
 
   if (disr & USBSTS_PCI) /* Resume */
   {
-    usb[port].activity              = 1;
-    usb[port].connectionEstablished = 1;
+    usb[port].activity                   = 1;
+    usb[port].connectionEstablished      = 1;
+    usb[port].gotConfigDescriptorRequest = 0;
     /* check if device is operating in HS mode or full speed */
     if (usb[port].hardware->PORTSC1_D & (1 << 9))
       usb[port].DevStatusFS2HS = TRUE;
@@ -1557,7 +1558,7 @@ uint32_t USB_ReadReqEP(uint8_t const port, uint32_t EPNum, uint8_t *pData, uint3
     @param[in]	ep		Endpoint number and direction
     					7	Direction (0 - out; 1-in)
     					3:0	Endpoint number
-    @return		Number of bytes left to be sent
+    @return		when >= 0 number of bytes left to be sent, -1 after a (re-)connect
 *******************************************************************************/
 int32_t USB_Core_BytesToSend(uint8_t const port, uint32_t endbuff, uint32_t ep)
 {

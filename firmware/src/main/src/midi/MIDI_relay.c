@@ -7,20 +7,22 @@
 #include "drv/nl_leds.h"
 #include "sys/nl_version.h"
 
-#define TX_BUFFERSIZE          (1024)  // buffer for outgoing messages
-#define NUMBER_OF_BUFFERS      (8)     // number of buffers, must be 2^N !
+#define TX_BUFFERSIZE          (4096)  // buffers for outgoing messages
+#define NUMBER_OF_BUFFERS      (4)     // number of buffers per port, must be 2^N !
 #define NUMBER_OF_BUFFERS_MASK (NUMBER_OF_BUFFERS - 1)
 
 #define A (0)
 #define B (1)
 
 // ringbuffer of buffers
+__attribute__((section(".noinit.$RamLoc32"))) static uint8_t txBuffer[2][NUMBER_OF_BUFFERS][TX_BUFFERSIZE];
+
 typedef struct
 {
-  uint8_t  buff[NUMBER_OF_BUFFERS][TX_BUFFERSIZE];
   uint16_t bufHead;       // 0..(NUMBER_OF_BUFFERS-1)
   uint16_t bufTail;       // 0..(NUMBER_OF_BUFFERS-1)
   uint16_t bufHeadIndex;  // used bytes in the current head (front) buffer
+  uint8_t  step;
 } ringbuffer_t;
 
 static ringbuffer_t rb[2];
@@ -57,6 +59,7 @@ static inline int fillBuffer(uint8_t const port, uint8_t *buff, uint32_t len)
         p->bufHead      = savedBufHead;
         p->bufHeadIndex = savedBufHeadIndex;
         // status[port].dataLoss = TIMEOUT_DATALOSS;  // indicate that we had to discard data
+        LED_DBG3 = 1;
         return 0;
       }
       // status[port].buffering = TIMEOUT_BUFFERING;  // indicate that we had to buffer data
@@ -64,7 +67,9 @@ static inline int fillBuffer(uint8_t const port, uint8_t *buff, uint32_t len)
       p->bufHeadIndex = 0;
     }
 
-    uint8_t         c = p->buff[p->bufHead][p->bufHeadIndex++] = *(buff++);
+    uint8_t const c                               = *(buff++);  // copy the byte
+    txBuffer[port][p->bufHead][p->bufHeadIndex++] = c;
+
     static uint32_t open, count, firstCount;
     if (c == 0xF0)
     {
@@ -85,12 +90,69 @@ static inline int fillBuffer(uint8_t const port, uint8_t *buff, uint32_t len)
 
     len--;
   }
+  //  p->bufHead      = savedBufHead; // ???
+  //  p->bufHeadIndex = savedBufHeadIndex; // ???
   return 1;
 }
 
 // ------------------------------------------------------------------
 
 static inline void checkSends(uint8_t const port)
+{
+  ringbuffer_t *const p = &rb[port];
+
+  if (!USB_MIDI_IsConfigured(port))
+  {
+    p->bufHead      = 0;
+    p->bufHeadIndex = 0;
+    p->bufTail      = 0;
+    p->step         = 0;
+    return;
+  }
+
+  switch (p->step)
+  {
+    case 0:  // wait for jobs
+      if (p->bufHead != p->bufTail)
+      {  // send stashed buffers first
+        if (port == 0)
+          LED_DBG1 = 1;
+        else
+          LED_DBG2 = 1;
+        if (USB_MIDI_Send(port, txBuffer[port][p->bufTail], TX_BUFFERSIZE))
+          p->step = 1;  // send accepted-->wait, else retry
+      }
+      else if (p->bufHeadIndex != 0)
+      {  // send current buffer
+        if (port == 0)
+          LED_DBG1 = 1;
+        else
+          LED_DBG2 = 1;
+        if (USB_MIDI_Send(port, txBuffer[port][p->bufTail], p->bufHeadIndex))
+        {  // send accepted-->wait, else retry
+          p->step = 1;
+          // advance head (new current write buffer)
+          p->bufHead      = (p->bufHead + 1) & NUMBER_OF_BUFFERS_MASK;
+          p->bufHeadIndex = 0;
+        }
+      }
+      break;
+
+    case 1:  // wait for send to complete
+      if (USB_MIDI_BytesToSend(port) > 0)
+        break;
+      if (port == 0)
+        LED_DBG1 = 0;
+      else
+        LED_DBG2 = 0;
+      // release write buffer
+      p->bufTail = (p->bufTail + 1) & NUMBER_OF_BUFFERS_MASK;
+      p->step    = 0;  // check for more to send
+      break;
+  }
+}
+
+static inline void checkSends_old(uint8_t const port)
 {
   ringbuffer_t *const p = &rb[port];
   if ((p->bufHead == p->bufTail && p->bufHeadIndex == 0))
@@ -101,7 +163,7 @@ static inline void checkSends(uint8_t const port)
 
   if (p->bufHead != p->bufTail)
   {  // send stashed buffers first
-    if (!USB_MIDI_Send(port, p->buff[p->bufTail], TX_BUFFERSIZE))
+    if (!USB_MIDI_Send(port, txBuffer[port][p->bufTail], TX_BUFFERSIZE))
       ;  //status[port].dataLoss = TIMEOUT_DATALOSS;  // send failed
     else
     {
@@ -112,7 +174,7 @@ static inline void checkSends(uint8_t const port)
   }
   if (p->bufHeadIndex != 0)
   {  // send current buffer
-    if (!USB_MIDI_Send(port, p->buff[p->bufHead], p->bufHeadIndex))
+    if (!USB_MIDI_Send(port, txBuffer[port][p->bufHead], p->bufHeadIndex))
       ;  //status[port].dataLoss = TIMEOUT_DATALOSS;  // send failed
     else
     {

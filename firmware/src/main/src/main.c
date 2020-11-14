@@ -8,7 +8,6 @@
 
 #include <stdint.h>
 
-#include "cr_start_m0.h"
 #include "sys/nl_coos.h"
 #include "sys/nl_watchdog.h"
 //#include "sys/delays.h"
@@ -72,9 +71,6 @@ void Init(void)
   COOS_Task_Add(MIDI_Relay_Process, 1 * TS + 2, 40 * TS);  // every 50 ms
   COOS_Task_Add(LED_Process,        2 * TS + 3, 20 * TS);  // every 25 ms
   // clang-format on
-
-  /* M0 init  */
-  // cr_start_m0(SLAVE_M0APP, &__core_m0app_START__);
 
   /* M4 sysTick */
   M4SysTick_Init();
