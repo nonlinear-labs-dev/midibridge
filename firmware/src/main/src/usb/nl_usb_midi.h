@@ -17,13 +17,14 @@
 #define USB_MIDI_BUFFER_SIZE 1024
 /** @} */
 
-/* Definition for Midi Receive Callback function */
-typedef void (*MidiRcvCallback)(uint8_t const port, uint8_t* buff, uint32_t len);
+/* Definition for Midi Callback functions */
+typedef void (*MidiReceiveComplete_Callback)(uint8_t const port, uint8_t* buff, uint32_t len);
+typedef void (*MidiSendComplete_Callback)(uint8_t const port);
 
 /* USB MIDI functions */
 void USB_MIDI_Init(uint8_t const port);
 void USB_MIDI_DeInit(uint8_t const port);
-void USB_MIDI_Config(uint8_t const port, MidiRcvCallback midircv);
+void USB_MIDI_Config(uint8_t const port, MidiReceiveComplete_Callback midircv, MidiSendComplete_Callback midisend);
 void USB_MIDI_Poll(uint8_t const port);
 
 uint32_t USB_MIDI_IsConfigured(uint8_t const port);

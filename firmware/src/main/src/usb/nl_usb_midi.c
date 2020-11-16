@@ -2,30 +2,6 @@
 /** @file		nl_usb_midi.c
     @date		2014-12-11
     @brief    	Functions for the USB-MIDI driver
-    @example	Interrupt mode:
-    			main() {
-    				...
-    				USB_MIDI_Init();
-    				...
-    				while(1) {
-    					USB_MIDI_Send(buffer, length, 1);
-    				}
-    			}
-
-    			Polling mode:
-    			main () {
-    				...
-    				USB_MIDI_Init();
-    				...
-    				while(1) {
-    					...
-    					if(systick_triggered){
-    						USB_MIDI_Poll();
-    					}
-    					...
-    					USB_MIDI_Send(buffer, length, 0);
-    				}
-    			}
 	@ingroup	nl_drv_modules
     @author		Nemanja Nikodijevic [2014-12-11]
 
@@ -36,16 +12,17 @@
 #include "sys/globals.h"
 #include "io/pins.h"
 
-#define RX_BUFFERSIZE (16384)  // 16k is the max buffer USB hardware can handle
+#define RX_BUFFERSIZE (16384)  // 16k is the max the USB hardware can handle
 
 __attribute__((section(".noinit.$RamAHB32"))) static uint8_t rxBuffer[2][RX_BUFFERSIZE];
 
 typedef struct
 {
-  uint32_t        endOfBuffer;
-  MidiRcvCallback MIDI_RcvCallback;
-  uint8_t         suspendReceive;
-  uint8_t         dropMessages;
+  uint32_t                     endOfBuffer;
+  MidiReceiveComplete_Callback ReceiveCallback;
+  MidiSendComplete_Callback    SendCallback;
+  uint8_t                      suspendReceive;
+  uint8_t                      dropMessages;
 } UsbMidi_t;
 
 static UsbMidi_t usbMidi[2];
@@ -62,8 +39,8 @@ static void EndPoint1_ReadFromHost(uint8_t const port, uint32_t const event)
   {
     case USB_EVT_OUT:
       length = USB_ReadEP(port, 0x01, rxBuffer[port]);
-      if (usbMidi[port].MIDI_RcvCallback)
-        usbMidi[port].MIDI_RcvCallback(port, rxBuffer[port], length);
+      if (usbMidi[port].ReceiveCallback)
+        usbMidi[port].ReceiveCallback(port, rxBuffer[port], length);
     case USB_EVT_OUT_NAK:
       if (!usbMidi[port].suspendReceive)
         USB_ReadReqEP(port, 0x01, rxBuffer[port], RX_BUFFERSIZE);
@@ -81,7 +58,10 @@ static void EndPoint2_WriteToHost(uint8_t const port, uint32_t const event)
   switch (event)
   {
     case USB_EVT_IN_NAK:
+      break;
     case USB_EVT_IN:  // end of write out
+      if (usbMidi[port].SendCallback)
+        usbMidi[port].SendCallback(port);
       break;
   }
 }
@@ -115,9 +95,10 @@ void USB_MIDI_DeInit(uint8_t const port)
  *  @param[in]	midircv		Pointer to the callback function for
  *  						the MIDI received data
 *******************************************************************************/
-void USB_MIDI_Config(uint8_t const port, MidiRcvCallback midircv)
+void USB_MIDI_Config(uint8_t const port, MidiReceiveComplete_Callback midircv, MidiSendComplete_Callback midisend)
 {
-  usbMidi[port].MIDI_RcvCallback = midircv;
+  usbMidi[port].ReceiveCallback = midircv;
+  usbMidi[port].SendCallback    = midisend;
 }
 
 /******************************************************************************/
