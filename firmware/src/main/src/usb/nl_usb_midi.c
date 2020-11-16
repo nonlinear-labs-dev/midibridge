@@ -44,6 +44,7 @@ typedef struct
 {
   uint32_t        endOfBuffer;
   MidiRcvCallback MIDI_RcvCallback;
+  uint8_t         suspendReceive;
   uint8_t         dropMessages;
 } UsbMidi_t;
 
@@ -53,7 +54,7 @@ static UsbMidi_t usbMidi[2];
 /** @brief		Endpoint 1 Callback
     @param[in]	event	Event that triggered the interrupt
 *******************************************************************************/
-static void EndPoint1(uint8_t const port, uint32_t const event)
+static void EndPoint1_ReadFromHost(uint8_t const port, uint32_t const event)
 {
   uint32_t length;
 
@@ -64,7 +65,8 @@ static void EndPoint1(uint8_t const port, uint32_t const event)
       if (usbMidi[port].MIDI_RcvCallback)
         usbMidi[port].MIDI_RcvCallback(port, rxBuffer[port], length);
     case USB_EVT_OUT_NAK:
-      USB_ReadReqEP(port, 0x01, rxBuffer[port], RX_BUFFERSIZE);
+      if (!usbMidi[port].suspendReceive)
+        USB_ReadReqEP(port, 0x01, rxBuffer[port], RX_BUFFERSIZE);
       break;
   }
 }
@@ -73,7 +75,7 @@ static void EndPoint1(uint8_t const port, uint32_t const event)
 /** @brief		Endpoint 2 Callback
     @param[in]	event	Event that triggered the interrupt
 *******************************************************************************/
-static void EndPoint2(uint8_t const port, uint32_t const event)
+static void EndPoint2_WriteToHost(uint8_t const port, uint32_t const event)
 {
 
   switch (event)
@@ -96,13 +98,15 @@ void USB_MIDI_Init(uint8_t const port)
   USB_Core_Device_String_Descriptor_Set(port, (const uint8_t *) (port == 0) ? USB0_MIDI_StringDescriptor : USB1_MIDI_StringDescriptor);
   USB_Core_Device_Device_Quali_Descriptor_Set(port, (const uint8_t *) USB_MIDI_DeviceQualifier);
   /** assign callbacks */
-  USB_Core_Endpoint_Callback_Set(port, 1, EndPoint1);
-  USB_Core_Endpoint_Callback_Set(port, 2, EndPoint2);
+  USB_Core_Endpoint_Callback_Set(port, 1, EndPoint1_ReadFromHost);
+  USB_Core_Endpoint_Callback_Set(port, 2, EndPoint2_WriteToHost);
   USB_Core_Init(port);
 }
 
 void USB_MIDI_DeInit(uint8_t const port)
 {
+  usbMidi[port].suspendReceive = 0;
+  USB_Core_DeInit(port);
   USB_Core_DeInit(port);
 }
 
@@ -171,9 +175,23 @@ int32_t USB_MIDI_BytesToSend(uint8_t const port)
 /** @brief		Drop all messages written to the interface
     @param[in]	drop	1 - drop future messages; 0 - do not drop future msgs
 *******************************************************************************/
-void USB_MIDI_DropMessages(uint8_t const port, uint8_t drop)
+void USB_MIDI_DropMessages(uint8_t const port, uint8_t const drop)
 {
   usbMidi[port].dropMessages = drop;
 }
 
+/******************************************************************************/
+/** @brief		Suspend further receives
+    @param[in]	suspend	!= 0--> suspend, == 0, normal
+*******************************************************************************/
+
+void USB_MIDI_SuspendReceive(uint8_t const port, uint8_t const suspend)
+{
+  usbMidi[port].suspendReceive = suspend;
+}
+
+int USB_MIDI_SuspendReceiveGet(uint8_t const port)
+{
+  return usbMidi[port].suspendReceive;
+}
 // EOF
