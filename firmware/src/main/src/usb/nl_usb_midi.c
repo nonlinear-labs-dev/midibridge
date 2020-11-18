@@ -10,6 +10,7 @@
 #include "usb/nl_usb_descmidi.h"
 #include "usb/nl_usb_core.h"
 #include "sys/globals.h"
+#include "sys/nl_stdlib.h"
 #include "io/pins.h"
 
 #define RX_BUFFERSIZE (16384)  // 16k is the max the USB hardware can handle
@@ -71,6 +72,9 @@ static void EndPoint2_WriteToHost(uint8_t const port, uint32_t const event)
 *******************************************************************************/
 void USB_MIDI_Init(uint8_t const port)
 {
+  memset(&(rxBuffer[0][0]), 0, RX_BUFFERSIZE);
+  memset(&(rxBuffer[1][0]), 0, RX_BUFFERSIZE);
+
   /** assign descriptors */
   USB_Core_Device_Descriptor_Set(port, (const uint8_t *) USB_MIDI_DeviceDescriptor);
   USB_Core_Device_FS_Descriptor_Set(port, (const uint8_t *) USB_MIDI_FSConfigDescriptor);
