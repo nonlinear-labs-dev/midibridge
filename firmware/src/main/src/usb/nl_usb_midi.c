@@ -13,10 +13,6 @@
 #include "sys/nl_stdlib.h"
 #include "io/pins.h"
 
-#define RX_BUFFERSIZE (16384)  // 16k is the max the USB hardware can handle
-
-__attribute__((section(".noinit.$RamAHB32"))) static uint8_t rxBuffer[2][RX_BUFFERSIZE];
-
 typedef struct
 {
   uint32_t                     endOfBuffer;
@@ -34,17 +30,37 @@ static UsbMidi_t usbMidi[2];
 *******************************************************************************/
 static void EndPoint1_ReadFromHost(uint8_t const port, uint32_t const event)
 {
-  uint32_t length;
+  // buffer sizes must match the values set up in the configuration descriptors !
+  static uint8_t rxBuffer0[USB_HS_BULK_SIZE] __attribute__((aligned(4)));
+  static uint8_t rxBuffer1[USB_FS_BULK_SIZE] __attribute__((aligned(4)));
+
+  struct _rxBuffer
+  {
+    uint8_t *data;
+    uint16_t size;
+  } rxBuffer[2] = {
+    {
+        .data = rxBuffer0,
+        .size = sizeof rxBuffer0,
+    },
+    {
+        .data = rxBuffer1,
+        .size = sizeof rxBuffer1,
+    },
+  }  ;
 
   switch (event)
   {
     case USB_EVT_OUT:
-      length = USB_ReadEP(port, 0x01, rxBuffer[port]);
+    {
+      uint32_t length = USB_ReadEP(port, 0x01);
       if (usbMidi[port].ReceiveCallback)
-        usbMidi[port].ReceiveCallback(port, rxBuffer[port], length);
+        usbMidi[port].ReceiveCallback(port, rxBuffer[port].data, length);
+    }
+    // fall-through is intentional
     case USB_EVT_OUT_NAK:
       if (!usbMidi[port].suspendReceive)
-        USB_ReadReqEP(port, 0x01, rxBuffer[port], RX_BUFFERSIZE);
+        USB_ReadReqEP(port, 0x01, rxBuffer[port].data, rxBuffer[port].size);
       break;
   }
 }
@@ -72,9 +88,6 @@ static void EndPoint2_WriteToHost(uint8_t const port, uint32_t const event)
 *******************************************************************************/
 void USB_MIDI_Init(uint8_t const port)
 {
-  memset(&(rxBuffer[0][0]), 0, RX_BUFFERSIZE);
-  memset(&(rxBuffer[1][0]), 0, RX_BUFFERSIZE);
-
   /** assign descriptors */
   USB_Core_Device_Descriptor_Set(port, (const uint8_t *) USB_MIDI_DeviceDescriptor);
   USB_Core_Device_FS_Descriptor_Set(port, (const uint8_t *) USB_MIDI_FSConfigDescriptor);

@@ -589,13 +589,15 @@ extern "C"
 
   typedef struct
   { /*!< (@ 0x40006000) USB0 Structure         */
-    __I uint32_t RESERVED0[64];
-    __I uint32_t CAPLENGTH; /*!< (@ 0x40006100) Capability register length */
-    __I uint32_t HCSPARAMS; /*!< (@ 0x40006104) Host controller structural parameters */
-    __I uint32_t HCCPARAMS; /*!< (@ 0x40006108) Host controller capability parameters */
-    __I uint32_t RESERVED1[5];
-    __I uint32_t DCIVERSION; /*!< (@ 0x40006120) Device interface version number */
-    __I uint32_t RESERVED2[7];
+    __I uint32_t  RESERVED01[36];
+    __IO uint32_t SBUSCFG; /*!< (@ 0x40006090) System bus interface configuration register */
+    __I uint32_t  RESERVED02[27];
+    __I uint32_t  CAPLENGTH; /*!< (@ 0x40006100) Capability register length */
+    __I uint32_t  HCSPARAMS; /*!< (@ 0x40006104) Host controller structural parameters */
+    __I uint32_t  HCCPARAMS; /*!< (@ 0x40006108) Host controller capability parameters */
+    __I uint32_t  RESERVED1[5];
+    __I uint32_t  DCIVERSION; /*!< (@ 0x40006120) Device interface version number */
+    __I uint32_t  RESERVED2[7];
 
     union
     {

@@ -1,7 +1,5 @@
-#include "MIDI_relay.h"
-#include "usb/nl_usb_core.h"
+//#include "MIDI_relay.h"
 #include "usb/nl_usb_midi.h"
-#include "usb/nl_usb_descmidi.h"
 #include "io/pins.h"
 #include "sys/globals.h"
 #include "drv/nl_leds.h"
@@ -77,11 +75,7 @@ static void ReceiveCallback(uint8_t const port, uint8_t *buff, uint32_t len)
   }
 
   if (len == 0)
-  {
-    LED_DBG3 = 1;
     return;
-  }
-  LED_DBG3 = 0;
 
   pendingData[outgoingPort].count++;
 
@@ -98,10 +92,8 @@ static void SendCallback(uint8_t const port)
 
 void MIDI_Relay_Init(void)
 {
-  for (uint8_t port = 0; port <= 1; port++)
-  {
-    USB_MIDI_Config(port, ReceiveCallback, SendCallback);
-    USB_MIDI_Init(port);
-    USB_MIDI_Init(port);
-  }
+  USB_MIDI_Config(0, ReceiveCallback, SendCallback);
+  USB_MIDI_Config(1, ReceiveCallback, SendCallback);
+  USB_MIDI_Init(0);
+  USB_MIDI_Init(1);
 }

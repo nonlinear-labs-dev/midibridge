@@ -29,8 +29,8 @@ void CPU_ConfigureClocks(void)
   Delay300();                                               // delay at least 300 µs
 
   /* STEP 1: set cpu to mid frequency (according to datasheet) */
-  // CGU_SetPLL1(8);                             // f_osc x 8 = 96 MHz
-  CGU_SetPLL1(4);                             // f_osc x 4 = 48 MHz
+  CGU_SetPLL1(8);                             // f_osc x 8 = 96 MHz
+  // CGU_SetPLL1(4);                             // f_osc x 4 = 48 MHz
   Delay300();                                 // delay at least 300 µs
   CGU_EnableEntity(CGU_CLKSRC_PLL1, ENABLE);  // Enable PLL1 after setting is done
   Delay300();                                 // delay at least 300 µs
@@ -39,7 +39,7 @@ void CPU_ConfigureClocks(void)
   CGU_UpdateClock();
   Delay300();  // delay at least 300 µs
 
-#if 01
+#if 0
   /* STEP 2: set cpu to high frequency */
   CGU_SetPLL1(17);    // set PLL1 to: f_osc x 17 = 204 MHz
   Delay300();         // delay at least 300 µs

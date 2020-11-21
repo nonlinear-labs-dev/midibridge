@@ -10,13 +10,6 @@
 
 #include "nl_usbd.h"
 
-/** USB MIDI driver configuration block
- * @{
- */
-/** MIDI buffer size */
-#define USB_MIDI_BUFFER_SIZE 1024
-/** @} */
-
 /* Definition for Midi Callback functions */
 typedef void (*MidiReceiveComplete_Callback)(uint8_t const port, uint8_t* buff, uint32_t len);
 typedef void (*MidiSendComplete_Callback)(uint8_t const port);

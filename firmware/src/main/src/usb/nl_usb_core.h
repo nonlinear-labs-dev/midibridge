@@ -230,7 +230,7 @@ void     USB0_IRQHandler(void);
 void     USB1_IRQHandler(void);
 void     USB_ProgDTD(uint8_t const port, uint32_t Edpt, uint32_t ptrBuff, uint32_t TsfSize);
 uint32_t USB_WriteEP(uint8_t const port, uint32_t EPNum, uint8_t *pData, uint32_t cnt);
-uint32_t USB_ReadEP(uint8_t const port, uint32_t EPNum, uint8_t *pData);
+uint32_t USB_ReadEP(uint8_t const port, uint32_t EPNum);
 uint32_t USB_ReadReqEP(uint8_t const port, uint32_t EPNum, uint8_t *pData, uint32_t len);
 int32_t  USB_Core_BytesToSend(uint8_t const port, uint32_t endbuff, uint32_t ep);
 void     USB_Core_Device_Descriptor_Set(uint8_t const port, const uint8_t *ddesc);

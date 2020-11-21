@@ -92,9 +92,9 @@
  * @{
  */
 /** Full-speed */
-#define USB_FS_BULK_SIZE 0x0040
+#define USB_FS_BULK_SIZE (64)  // can only be 8, 16, 32 or 64
 /** Hi-speed */
-#define USB_HS_BULK_SIZE 0x0200
+#define USB_HS_BULK_SIZE (512)  // can only be 512
 /** @} */
 
 /** MIDI endpoint numbers

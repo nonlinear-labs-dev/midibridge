@@ -11,6 +11,7 @@
 #include "usb/nl_usbd.h"
 #include "usb/nl_usb_core.h"
 #include "sys/nl_stdlib.h"
+#include "io/pins.h"
 
 static uint32_t EPAdr(uint32_t const EPNum);
 static void     SetAddress(uint8_t const port, uint32_t const adr);
@@ -36,10 +37,10 @@ static void     Handler(uint8_t const port);
 
 static DQH_T ep_QH_0[EP_NUM_MAX] __attribute__((aligned(2048)));
 static DQH_T ep_QH_1[EP_NUM_MAX] __attribute__((aligned(2048)));
-static DTD_T ep_TD_0[EP_NUM_MAX] __attribute__((aligned(32)));
-static DTD_T ep_TD_1[EP_NUM_MAX] __attribute__((aligned(32)));
+static DTD_T ep_TD_0[EP_NUM_MAX] __attribute__((aligned(64)));
+static DTD_T ep_TD_1[EP_NUM_MAX] __attribute__((aligned(64)));
 
-#pragma pack(push, 4)
+//#pragma pack(push, 4)
 typedef struct
 {
   LPC_USB0_Type *       hardware;
@@ -82,7 +83,7 @@ static usb_core_t usb[2] = {
     .ep_QH    = &ep_QH_1[0],
     .ep_TD    = &ep_TD_1[0] },
 };
-#pragma pack(pop)
+//#pragma pack(pop)
 
 /******************************************************************************/
 /** @brief		Translates the logical endpoint address to physical
@@ -155,6 +156,11 @@ static void Reset(uint8_t const port)
   {
     usb[port].ep_QH[i].next_dTD = (uint32_t) & (usb[port].ep_TD[i]);
   }
+  /* Set DMA Burst Size */
+  if (port == 0)
+    usb[port].hardware->SBUSCFG = 0x07;  // as per user manual
+  else
+    usb[port].hardware->BURSTSIZE = (16 << 8) | (16 << 0);  // one 32bit word at a time
   /* Enable interrupts */
   usb[port].hardware->USBINTR_D = USBSTS_UI
       | USBSTS_UEI
@@ -270,6 +276,9 @@ void USB_Core_Init(uint8_t const port)
 
   Reset(port);
   SetAddress(port, 0);
+
+  /* set IRQ threshold to "immediate" */
+  usb[port].hardware->USBCMD_D &= 0xFF00FFFF;
 
   /* USB Connect */
   usb[port].hardware->USBCMD_D |= USBCMD_RS;
@@ -399,7 +408,7 @@ static inline void DataOutStage(uint8_t const port)
 {
   uint32_t cnt;
 
-  cnt = USB_ReadEP(port, 0x00, usb[port].EP0Data.pData);
+  cnt = USB_ReadEP(port, 0x00);
   usb[port].EP0Data.pData += cnt;
   usb[port].EP0Data.Count -= cnt;
 }
@@ -417,7 +426,7 @@ static inline void StatusInStage(uint8_t const port)
 *******************************************************************************/
 static void inline StatusOutStage(uint8_t const port)
 {
-  USB_ReadEP(port, 0x00, usb[port].EP0Buf);
+  USB_ReadEP(port, 0x00);
 }
 
 /******************************************************************************/
@@ -1514,10 +1523,9 @@ uint32_t USB_WriteEP(uint8_t const port, uint32_t EPNum, uint8_t *pData, uint32_
     @param[in]	EPNum	Endpoint number and direction
     					7	Direction (0 - out; 1-in)
     					3:0	Endpoint number
-    @param[in]	pData	Pointer to data buffer
     @return		Number of bytes read
 *******************************************************************************/
-uint32_t USB_ReadEP(uint8_t const port, uint32_t EPNum, uint8_t *pData)
+uint32_t USB_ReadEP(uint8_t const port, uint32_t EPNum)
 {
   uint32_t cnt, n;
   DTD_T *  pDTD;
