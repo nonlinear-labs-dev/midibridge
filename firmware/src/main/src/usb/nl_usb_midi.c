@@ -47,7 +47,7 @@ static void EndPoint1_ReadFromHost(uint8_t const port, uint32_t const event)
         .data = rxBuffer1,
         .size = sizeof rxBuffer1,
     },
-  }  ;
+  };
 
   switch (event)
   {

@@ -1368,8 +1368,7 @@ static inline void Handler(uint8_t const port)
     usb[port].connectionEstablished      = 1;
     usb[port].gotConfigDescriptorRequest = 0;
     /* check if device is operating in HS mode or full speed */
-    if (usb[port].hardware->PORTSC1_D & (1 << 9))
-      usb[port].DevStatusFS2HS = TRUE;
+    usb[port].DevStatusFS2HS = ((port == 0) && (usb[port].hardware->PORTSC1_D & (1 << 9)));  // only port USB0 can be high-speed
   }
 
   /* handle setup status interrupts */
