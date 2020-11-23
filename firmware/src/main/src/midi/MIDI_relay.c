@@ -43,9 +43,6 @@ static inline void checkSends(uint8_t const port)
   if (USB_MIDI_BytesToSend(port) > 0)
     return;
 
-  if (USB_MIDI_BytesToSend(port) == -1)
-    LED_SetDirectAndHalt(0b100);
-
   USB_MIDI_SuspendReceive(incomingPort, 0);  // resume receiver
 }
 
@@ -63,8 +60,43 @@ void MIDI_Relay_Process(void)
 
 // ------------------------------------------------------------
 
+static void checkStream(uint8_t const port, uint8_t *buff, uint32_t len)
+{
+  static int step[2];
+  static int count[2];
+
+  for (int i = 0; i < len; i++)
+  {
+    uint8_t byte = buff[i];
+
+    switch (step[port])
+    {
+      case 0:  // wait for sysex begin
+        if (byte == 0xF0)
+        {
+          count[port] = 0;
+          step[port]  = 1;
+        }
+        break;
+      case 1:  // sysex content
+        count[port]++;
+        if (byte == 0xF7)  // end of sysex ?
+        {
+          if (count[port] != 62)  // sysex size mismatch ?
+            LED_DBG3 = 1;
+          step[port] = 0;
+          break;
+        }
+        if (byte & 0x80)  // wrong byte within sysex ?
+          LED_DBG3 = 1;
+        break;
+    }
+  }
+}
+
 static void ReceiveCallback(uint8_t const port, uint8_t *buff, uint32_t len)
 {
+  // checkStream(port, buff, len);
   uint8_t const outgoingPort = port ^ 1;
   if (!USB_MIDI_IsConfigured(outgoingPort))  // output side not ready ?
   {
