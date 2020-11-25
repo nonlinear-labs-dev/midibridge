@@ -14,6 +14,15 @@
 #include <fcntl.h>
 #include <alsa/asoundlib.h>
 
+#define PAYLOAD_BUFFER_SIZE (100000ul)
+#define PAYLOAD_SIZE        (3000ul)  // encoded payload transfer size, >= 8, <= PAYLOAD_BUFFER_SIZE !!
+
+#define RAW_TX_BUFFER_SIZE (PAYLOAD_BUFFER_SIZE * 2ul)  // need headroom for 8-to-7 bit encoding of the payload
+#define RAW_RX_BUFFER_SIZE (PAYLOAD_BUFFER_SIZE * 2ul)  // should have headroom for 8-to-7 bit encoding of the payload
+#define PARSER_BUFFER_SIZE (RAW_RX_BUFFER_SIZE)
+
+#define SEND_WAIT_MS (1ul)  // milliseconds to wait when send buffer is going to overrun
+
 typedef enum
 {
   FALSE = 0,
@@ -24,9 +33,8 @@ static BOOL           send;   // flag for program function: 1-->send , 0-->recei
 static char const *   pName;  // port name
 static snd_rawmidi_t *port;   // MIDI port
 static BOOL           stop;
-static int const      BUFFER_SIZE        = 1000;
-static int const      encodedPayloadSize = 40;  // encoded payload transfer size, >= 8, <= BUFFER_SIZE !!
-static BOOL           dump               = FALSE;
+
+static BOOL dump = FALSE;
 
 static void error(char const *const format, ...)
 {
@@ -147,36 +155,74 @@ static inline int encodeSysex(void const *const pSrc, int len, void *const pDest
 static inline void doSend(void)
 {
   int     messageLen;
-  uint8_t dataBuf[BUFFER_SIZE];
-  uint8_t sendBuf[BUFFER_SIZE * 2];  // need room for decoding sysex
+  uint8_t dataBuf[PAYLOAD_BUFFER_SIZE];
+  uint8_t sendBuf[RAW_TX_BUFFER_SIZE];
   int     err, written;
-#if 0
+
+  snd_rawmidi_status_t *pStatus;
+  snd_rawmidi_status_alloca(&pStatus);
+
+#if 01
   snd_rawmidi_params_t *pParams;
   snd_rawmidi_params_alloca(&pParams);
 
   if ((err = snd_rawmidi_params_set_buffer_size(port, pParams, sizeof sendBuf)) < 0)
   {
-    error("cannot set buffer size of %d : %s", sizeof sendBuf, snd_strerror(err));
+    error("cannot set send buffer size of %d : %s", sizeof sendBuf, snd_strerror(err));
     return;
   }
 #endif
+
+  if ((err = snd_rawmidi_nonblock(port, 0)) < 0)
+  {
+    error("cannot set blocking mode: %s", snd_strerror(err));
+    return;
+  }
+
+  messageLen = encodeSysex(dataBuf, PAYLOAD_SIZE, sendBuf);
+  printf("sysex size: %d\n", messageLen);
   do
   {
-    memset(dataBuf, 0x7F, sizeof(dataBuf));
+    memset(dataBuf, 0x55, sizeof(dataBuf));
     *((uint64_t *) dataBuf) = getTimeUSec();
-    messageLen              = encodeSysex(dataBuf, encodedPayloadSize, sendBuf);
+    messageLen              = encodeSysex(dataBuf, PAYLOAD_SIZE, sendBuf);
     int total               = 0;
     while (total != messageLen)
     {
-      written = snd_rawmidi_write(port, &(sendBuf[total]), messageLen - total);
-      snd_rawmidi_drain(port);
+      int toTransfer = messageLen - total;
+
+      if ((err = snd_rawmidi_status(port, pStatus)))
+      {
+        error("cannot get status: %s", snd_strerror(errno));
+        break;
+      }
+      int avail = snd_rawmidi_status_get_avail(pStatus);
+      if (toTransfer > avail)
+      {
+        error("rawmidi send larger than buffer by: %d", toTransfer - avail);
+        usleep(1000ul * SEND_WAIT_MS);
+        continue;
+      }
+
+      uint64_t time = getTimeUSec();
+      written       = snd_rawmidi_write(port, &(sendBuf[total]), toTransfer);
+
+      if ((err = snd_rawmidi_drain(port)) < 0)
+      {
+        error("cannot drain buffer: %s", snd_strerror(err));
+        return;
+      }
       if (written < 0)
       {
         error("cannot send data: %s", snd_strerror(written));
         return;
       }
       // printf("chunk of %d bytes transferred\n", written);
+
       total += written;
+      time = getTimeUSec() - time;
+      // printf("sleeping %lu usecs.\n", time);
+      usleep(time);
     }
     if (written != total)
       ;  //printf("total of %d bytes transferred\n", total);
@@ -188,12 +234,12 @@ static inline void doSend(void)
 // -------- functions for receiving --------
 //
 
-static inline void examineContent(void const *const data, int const len)
+static inline BOOL examineContent(void const *const data, int const len)
 {
-  if (len != encodedPayloadSize)
+  if (len != PAYLOAD_SIZE)
   {
-    error("receive: payload has wrong length %d, expected %d", len, encodedPayloadSize);
-    exit(3);
+    error("receive: payload has wrong length %d, expected %d", len, PAYLOAD_SIZE);
+    return FALSE;
   }
 
   uint64_t const *const pTime = data;
@@ -218,13 +264,14 @@ static inline void examineContent(void const *const data, int const len)
            ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt);
     fflush(stdout);
   }
+  return TRUE;
 }
 
-static inline void parseReceivedByte(uint8_t byte)
+static inline BOOL parseReceivedByte(uint8_t byte)
 {
   static int step;
 
-  static uint8_t buf[BUFFER_SIZE];
+  static uint8_t buf[PARSER_BUFFER_SIZE];
   static int     bufPos = 0;
   static uint8_t topBitsMask;
   static uint8_t topBits;
@@ -240,22 +287,21 @@ static inline void parseReceivedByte(uint8_t byte)
         if (dump)
           printf("\n%2X ", byte);
       }
-      break;
+      return TRUE;
     case 1:              // sysex content
       if (byte == 0xF7)  // end of sysex ?
       {
         if (dump)
           printf("%02X\n", byte);
-        examineContent(buf, bufPos);
         step = 0;
-        break;
+        return examineContent(buf, bufPos);
       }
       if (dump)
         printf("%02X ", byte);
       if (byte & 0x80)
       {
         error("unexpected byte >= 0x80 within sysex!");
-        exit(3);
+        return FALSE;
       }
       if (topBitsMask == 0)
       {
@@ -267,15 +313,16 @@ static inline void parseReceivedByte(uint8_t byte)
         if (topBits & topBitsMask)
           byte |= 0x80;  // set top bit when required
         topBitsMask >>= 1;
-        if (bufPos >= BUFFER_SIZE)
+        if (bufPos >= PARSER_BUFFER_SIZE)
         {
           error("unexpected buffer overrun (no sysex terminator found)!");
-          exit(3);
+          return FALSE;
         }
         buf[bufPos++] = byte;
       }
       break;
   }
+  return TRUE;
 }
 
 static inline void doReceive(void)
@@ -283,27 +330,28 @@ static inline void doReceive(void)
   int            npfds;
   struct pollfd *pfds;
   int            read;
-  uint8_t        buf[BUFFER_SIZE];
+  uint8_t        buf[RAW_RX_BUFFER_SIZE];
   int            err;
   unsigned short revents;
 
   snd_rawmidi_status_t *pStatus;
   snd_rawmidi_status_alloca(&pStatus);
 
-#if 0
+#if 01
   snd_rawmidi_params_t *pParams;
 
   snd_rawmidi_params_alloca(&pParams);
 
   if ((err = snd_rawmidi_params_set_buffer_size(port, pParams, sizeof buf)) < 0)
   {
-    error("cannot set buffer size of %d : %s", sizeof buf, snd_strerror(err));
+    error("cannot set receive buffer size of %d : %s", sizeof buf, snd_strerror(err));
     return;
   }
 #endif
-  if ((err = snd_rawmidi_nonblock(port, 0)) < 0)
+
+  if ((err = snd_rawmidi_nonblock(port, 1)) < 0)
   {
-    error("cannot set blocking mode: %s", snd_strerror(err));
+    error("cannot set non-blocking mode: %s", snd_strerror(err));
     return;
   }
 
@@ -314,8 +362,6 @@ static inline void doReceive(void)
 
   do
   {
-    if (snd_rawmidi_status_get_xruns(pStatus))
-      error("rawmidi receive buffer overrun!");
     err = poll(pfds, npfds, 0);               // poll as fast as possible
     if (stop || (err < 0 && errno == EINTR))  // interrupted ?
       break;
@@ -345,9 +391,33 @@ static inline void doReceive(void)
       break;
     }
 
+    if ((err = snd_rawmidi_status(port, pStatus)))
+    {
+      error("cannot get status: %s", snd_strerror(errno));
+      break;
+    }
+
     for (int i = 0; i < read; ++i)
-      parseReceivedByte(buf[i]);
+    {
+      if (!parseReceivedByte(buf[i]))  // parser error
+      {
+        for (int j = 0; j < read; j++)
+        {
+          if (j == i)
+            printf(">>%02X<< ", buf[j]);  // mark the offending byte
+          else
+            printf("%02X ", buf[j]);
+        }
+        stop = TRUE;
+      }
+    }
+    if ((err = snd_rawmidi_status_get_xruns(pStatus)))
+    {
+      error("rawmidi receive buffer overrun: %d", err);
+      break;
+    }
   } while (TRUE);
+
   printf("\n");
   fflush(stdout);
 }
