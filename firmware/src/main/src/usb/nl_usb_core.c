@@ -7,6 +7,7 @@
     @author		Nemanja Nikodijevic 2014-12-11
 *******************************************************************************/
 #include "cmsis/LPC43xx.h"
+#include "cmsis/core_cm4.h"
 #include "cmsis/lpc_types.h"
 #include "usb/nl_usbd.h"
 #include "usb/nl_usb_core.h"

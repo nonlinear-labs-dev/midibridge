@@ -6,37 +6,38 @@
 #include "sys/globals.h"
 #include "drv/nl_leds.h"
 
-#if USBA_PORT_FOR_MIDI == 0
 #define pLED_REDa   (pLED_RED0)
 #define pLED_GREENa (pLED_GREEN0)
 #define pLED_BLUEa  (pLED_BLUE0)
-#else
-#define pLED_REDa   (pLED_RED1)
-#define pLED_GREENa (pLED_GREEN1)
-#define pLED_BLUEa  (pLED_BLUE1)
-#endif
 
-#if USBB_PORT_FOR_MIDI == 0
-#define pLED_REDb   (pLED_RED0)
-#define pLED_GREENb (pLED_GREEN0)
-#define pLED_BLUEb  (pLED_BLUE0)
-#else
 #define pLED_REDb   (pLED_RED1)
 #define pLED_GREENb (pLED_GREEN1)
 #define pLED_BLUEb  (pLED_BLUE1)
-#endif
+
+void LED_SetDirect(uint8_t const ledId, uint8_t const rgb)
+{
+  if (ledId)
+  {
+    *pLED_RED1   = !(rgb & 0b001);
+    *pLED_GREEN1 = !(rgb & 0b010);
+    *pLED_BLUE1  = !(rgb & 0b100);
+  }
+  else
+  {
+    *pLED_RED0   = !(rgb & 0b001);
+    *pLED_GREEN0 = !(rgb & 0b010);
+    *pLED_BLUE0  = !(rgb & 0b100);
+  }
+}
 
 void LED_SetDirectAndHalt(uint8_t const rgb)
 {
-  *pLED_RED0 = *pLED_RED1 = !(rgb & 0b001);
-  *pLED_GREEN0 = *pLED_GREEN1 = !(rgb & 0b010);
-  *pLED_BLUE0 = *pLED_BLUE1 = !(rgb & 0b100);
-
+  LED_SetDirect(0, rgb);
+  LED_SetDirect(1, rgb);
   __disable_irq();
   while (1)
     ;
 }
-
 typedef struct __attribute__((__packed__))
 {
   uint8_t r;

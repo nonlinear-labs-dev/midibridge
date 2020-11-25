@@ -20,7 +20,7 @@
 #define USB_MAX_PACKET0 64
 
 /** USB driver in polling mode? */
-#define USB_POLLING 1
+#define USB_POLLING 0
 
 /* USB Endpoint Data Structure */
 typedef struct _USB_EP_DATA

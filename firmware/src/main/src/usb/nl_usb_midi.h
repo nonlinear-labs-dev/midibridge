@@ -23,6 +23,6 @@ void USB_MIDI_Poll(uint8_t const port);
 uint32_t USB_MIDI_IsConfigured(uint8_t const port);
 void     USB_MIDI_SuspendReceive(uint8_t const port, uint8_t const suspend);
 int      USB_MIDI_SuspendReceiveGet(uint8_t const port);
-uint32_t USB_MIDI_Send(uint8_t const port, uint8_t const* const buff, uint32_t const cnt);
+int32_t  USB_MIDI_Send(uint8_t const port, uint8_t const* const buff, uint32_t const cnt);
 int32_t  USB_MIDI_BytesToSend(uint8_t const port);
 void     USB_MIDI_DropMessages(uint8_t const port, uint8_t const drop);

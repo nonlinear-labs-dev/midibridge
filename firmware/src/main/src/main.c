@@ -57,9 +57,6 @@ void Init(void)
   /* LEDs */
   LED_Init();
 
-  /* MIDI relay */
-  MIDI_Relay_Init();
-
   /* scheduler */
   COOS_Init();
 
@@ -87,13 +84,15 @@ void main(void)
 
   while (waitForFirstSysTick)
     ;
+  /* MIDI relay */
+  MIDI_Relay_Init();
 
   while (1)
   {
     MIDI_Relay_ProcessFast();
-    USB_MIDI_Poll(0);  // Send/receive MIDI data, may do callbacks
-    USB_MIDI_Poll(1);  // Send/receive MIDI data, may do callbacks
-    COOS_Dispatch();   // Standard dispatching of the slower stuff
+    // USB_MIDI_Poll(0);  // Send/receive MIDI data, may do callbacks
+    // USB_MIDI_Poll(1);  // Send/receive MIDI data, may do callbacks
+    COOS_Dispatch();  // Standard dispatching of the slower stuff
   }
 }
 
@@ -114,6 +113,10 @@ void M4SysTick_Init(void)
 
 void SysTick_Handler(void)
 {
-  waitForFirstSysTick = 0;
+  if (waitForFirstSysTick)
+  {
+    waitForFirstSysTick = 0;
+    return;
+  }
   COOS_Update();
 }

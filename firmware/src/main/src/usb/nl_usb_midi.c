@@ -143,9 +143,9 @@ uint32_t USB_MIDI_IsConfigured(uint8_t const port)
     @param[in]	buff	Pointer to data buffer
     @param[in]	cnt		Amount of bytes to send
     @param[in]	imm		Immediate only
-    @return		Number of bytes written - Success ; 0 - Failure
+    @return		Number of bytes written - Success ; -1 - Failure
 *******************************************************************************/
-uint32_t USB_MIDI_Send(uint8_t const port, uint8_t const *const buff, uint32_t const cnt)
+int32_t USB_MIDI_Send(uint8_t const port, uint8_t const *const buff, uint32_t const cnt)
 {
 
   if (usbMidi[port].dropMessages)
@@ -153,11 +153,14 @@ uint32_t USB_MIDI_Send(uint8_t const port, uint8_t const *const buff, uint32_t c
 
   if (USB_Core_ReadyToWrite(port, 0x82))
   {
-    USB_WriteEP(port, 0x82, (uint8_t *) buff, (uint32_t) cnt);
-    usbMidi[port].endOfBuffer = (uint32_t) buff + cnt;
+    if (cnt)
+    {
+      USB_WriteEP(port, 0x82, (uint8_t *) buff, (uint32_t) cnt);
+      usbMidi[port].endOfBuffer = (uint32_t) buff + cnt;
+    }
     return cnt;
   }
-  return 0;
+  return -1;
 }
 
 /******************************************************************************/

@@ -1,5 +1,6 @@
 //#include "MIDI_relay.h"
 #include "usb/nl_usb_midi.h"
+#include "usb/nl_usb_descmidi.h"
 #include "io/pins.h"
 #include "sys/globals.h"
 #include "drv/nl_leds.h"
@@ -9,49 +10,108 @@
 #define A (0)
 #define B (1)
 
+typedef enum
+{
+  IDLE = 0,
+  RECEIVED,
+  TRANSMITTING,
+  WAIT_FOR_XMIT_READY,
+  WAIT_FOR_XMIT_DONE
+} PacketState_t;
+
 typedef struct
 {
-  int32_t  len;
-  uint32_t count;
-  uint8_t *buff;
-} PendingData_t;
+  PacketState_t state;
+  uint8_t *     pData;
+  int32_t       len;
+  int           remaining;
+  int           toTransfer;
+  int           index;
+} PacketTransfer_t;
 
-static PendingData_t pendingData[2];
+static PacketTransfer_t packetTransfer[2];  // port number is for outgoing port
+
+static inline void packetTransferReset(uint8_t const port)
+{
+  packetTransfer[port].state = IDLE;
+  USB_MIDI_SuspendReceive(port ^ 1, 0);  // keep receiver enabled
+  packetTransfer[port].pData     = NULL;
+  packetTransfer[port].len       = 0;
+  packetTransfer[port].remaining = 0;
+  packetTransfer[port].index     = 0;
+}
 
 static inline void checkSends(uint8_t const port)
 {
-  uint8_t const incomingPort = port ^ 1;
+  __disable_irq();
   if (!USB_MIDI_IsConfigured(port))
   {
-    USB_MIDI_SuspendReceive(incomingPort, 0);
-    pendingData[port].len = 0;
+    packetTransferReset(port);
+    __enable_irq();
     return;
   }
 
-  if (pendingData[port].len > 0)
+  // display
+  switch (packetTransfer[port].state)
   {
-    if (USB_MIDI_Send(port, pendingData[port].buff, pendingData[port].len))  // "start transmit" succeeded ?
-    {
-      pendingData[port].len = -1;  // mark transmit started
-      return;
-    }
+    case IDLE:
+      LED_SetDirect(port, 0b000);  // OFF
+      break;
+    case RECEIVED:
+      LED_SetDirect(port, 0b010);  // GREEN
+      break;
+    case TRANSMITTING:
+    case WAIT_FOR_XMIT_READY:
+    case WAIT_FOR_XMIT_DONE:
+      LED_SetDirect(port, 0b011);  // YELLOW
+      break;
   }
 
-  if (pendingData[port].len != -1)
-    return;  // no transmit running
+  switch (packetTransfer[port].state)
+  {
+    default:
+      break;
 
-  if (USB_MIDI_BytesToSend(port) > 0)
-    return;
+    case RECEIVED:
+      packetTransfer[port].remaining = packetTransfer[port].len;
+      packetTransfer[port].index     = 0;
+      packetTransfer[port].state     = TRANSMITTING;
+      // fall-through is on purpose
 
-  USB_MIDI_SuspendReceive(incomingPort, 0);  // resume receiver
+    case TRANSMITTING:
+      if (packetTransfer[port].remaining == 0)
+      {
+        packetTransfer[port].state = IDLE;
+        USB_MIDI_SuspendReceive(port ^ 1, 0);  // re-enable receiver
+        break;
+      }
+      packetTransfer[port].toTransfer = packetTransfer[port].remaining;
+      if (packetTransfer[port].toTransfer > USB_FS_BULK_SIZE)
+        packetTransfer[port].toTransfer = USB_FS_BULK_SIZE;  // limit to packet size for Full-Speed
+      packetTransfer[port].state = WAIT_FOR_XMIT_READY;
+      // fall-through is on purpose
+
+    case WAIT_FOR_XMIT_READY:
+      if (USB_MIDI_Send(port, &(packetTransfer[port].pData[packetTransfer[port].index]), packetTransfer[port].toTransfer) < 0)
+        break;  /// could not start transfer now, try later
+      packetTransfer[port].state = WAIT_FOR_XMIT_DONE;
+      break;
+
+    case WAIT_FOR_XMIT_DONE:
+      if (USB_MIDI_BytesToSend(port) > 0)
+        break;  // still sending...
+      packetTransfer[port].remaining -= packetTransfer[port].toTransfer;
+      packetTransfer[port].index += packetTransfer[port].toTransfer;
+      packetTransfer[port].state = TRANSMITTING;
+      break;
+  }
+  __enable_irq();
 }
 
 void MIDI_Relay_ProcessFast(void)
 {
   checkSends(0);
   checkSends(1);
-  LED_DBG1 = pendingData[0].count;
-  LED_DBG2 = pendingData[1].count;
 }
 
 void MIDI_Relay_Process(void)
@@ -60,72 +120,44 @@ void MIDI_Relay_Process(void)
 
 // ------------------------------------------------------------
 
-static void checkStream(uint8_t const port, uint8_t *buff, uint32_t len)
+static void Receive_IRQ_Callback(uint8_t const port, uint8_t *buff, uint32_t len)
 {
-  static int step[2];
-  static int count[2];
-
-  for (int i = 0; i < len; i++)
-  {
-    uint8_t byte = buff[i];
-
-    switch (step[port])
-    {
-      case 0:  // wait for sysex begin
-        if (byte == 0xF0)
-        {
-          count[port] = 0;
-          step[port]  = 1;
-        }
-        break;
-      case 1:  // sysex content
-        count[port]++;
-        if (byte == 0xF7)  // end of sysex ?
-        {
-          if (count[port] != 62)  // sysex size mismatch ?
-            LED_DBG3 = 1;
-          step[port] = 0;
-          break;
-        }
-        if (byte & 0x80)  // wrong byte within sysex ?
-          LED_DBG3 = 1;
-        break;
-    }
-  }
-}
-
-static void ReceiveCallback(uint8_t const port, uint8_t *buff, uint32_t len)
-{
-  // checkStream(port, buff, len);
-  uint8_t const outgoingPort = port ^ 1;
-  if (!USB_MIDI_IsConfigured(outgoingPort))  // output side not ready ?
-  {
-    USB_MIDI_SuspendReceive(port, 0);
-    pendingData[outgoingPort].len   = 0;
-    pendingData[outgoingPort].count = 0;
-    return;
+  if (len > 512)
+  {  // we should never receive a packet when not IDLE
+    LED_SetDirectAndHalt(0b101);
   }
 
   if (len == 0)
     return;
 
-  pendingData[outgoingPort].count++;
+  uint8_t const outgoingPort = port ^ 1;
+  if (!USB_MIDI_IsConfigured(outgoingPort))  // output side not ready ?
+  {
+    packetTransferReset(outgoingPort);
+    return;
+  }
 
-  USB_MIDI_SuspendReceive(port, 1);  // suspend receiver until transmit finished
+  if (packetTransfer[outgoingPort].state != IDLE)
+  {  // we should never receive a packet when not IDLE
+    LED_SetDirectAndHalt(0b001);
+  }
 
-  pendingData[outgoingPort].buff = buff;
-  pendingData[outgoingPort].len  = len;
+  // setup packet transfer data ...
+  packetTransfer[outgoingPort].pData = buff;
+  packetTransfer[outgoingPort].len   = len;
+  packetTransfer[outgoingPort].state = RECEIVED;
+  // ... and block receiver until transmit finished/failed
+  USB_MIDI_SuspendReceive(port, 1);
 }
 
-static void SendCallback(uint8_t const port)
+static void Send_IRQ_Callback(uint8_t const port)
 {
-  pendingData[port].count--;
 }
 
 void MIDI_Relay_Init(void)
 {
-  USB_MIDI_Config(0, ReceiveCallback, SendCallback);
-  USB_MIDI_Config(1, ReceiveCallback, SendCallback);
+  USB_MIDI_Config(0, Receive_IRQ_Callback, Send_IRQ_Callback);
+  USB_MIDI_Config(1, Receive_IRQ_Callback, Send_IRQ_Callback);
   USB_MIDI_Init(0);
   USB_MIDI_Init(1);
 }
