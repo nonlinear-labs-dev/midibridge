@@ -10,12 +10,10 @@
 
 #include "sys/nl_coos.h"
 #include "sys/nl_watchdog.h"
-//#include "sys/delays.h"
 #include "CPU_clock.h"
 #include "drv/nl_leds.h"
 #include "drv/nl_cgu.h"
 #include "io/pins.h"
-#include "usb/nl_usb_midi.h"
 #include "midi/MIDI_relay.h"
 #include "sys/nl_version.h"
 
@@ -85,7 +83,7 @@ void main(void)
   while (waitForFirstSysTick)
     ;
   /* MIDI relay */
-  MIDI_Relay_Init();
+  MIDI_Relay_Init();  // we wait until here because USB handlers are interrupt-driven and everything has to be set up
 
   while (1)
   {
@@ -106,7 +104,7 @@ void M4SysTick_Init(void)
 #define SYST_RVR   (uint32_t *) (0xE000E014)  // SysTick Reload Value
 #define SYST_CVR   (uint32_t *) (0xE000E018)  // SysTick Counter Value
 #define SYST_CALIB (uint32_t *) (0xE000E01C)  // SysTick Calibration
-  *SYST_RVR = (NL_LPC_CLK / M4_FREQ_HZ) - 1;
+  *SYST_RVR = (M4coreClock / M4_FREQ_HZ) - 1;
   *SYST_CVR = 0;
   *SYST_CSR = 0b111;  // processor clock | IRQ enabled | counter enabled
 }
@@ -119,4 +117,5 @@ void SysTick_Handler(void)
     return;
   }
   COOS_Update();
+  MIDI_Relay_TickerInterrupt();
 }

@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include "cmsis/lpc43xx_cgu.h"
 
+uint32_t M4coreClock;
+
 static void Delay300(void);
 
 /******************************************************************************/
@@ -30,7 +32,7 @@ void CPU_ConfigureClocks(void)
 
   /* STEP 1: set cpu to mid frequency (according to datasheet) */
   CGU_SetPLL1(8);  // f_osc x 8 = 96 MHz
-  // CGU_SetPLL1(4);                             // f_osc x 4 = 48 MHz
+  M4coreClock = 8ul * 12000000ul;
   Delay300();                                 // delay at least 300 µs
   CGU_EnableEntity(CGU_CLKSRC_PLL1, ENABLE);  // Enable PLL1 after setting is done
   Delay300();                                 // delay at least 300 µs
@@ -45,6 +47,7 @@ void CPU_ConfigureClocks(void)
   Delay300();         // delay at least 300 µs
   CGU_UpdateClock();  // Update Clock Frequency
   Delay300();         // delay at least 300 µs
+  M4coreClock = 204000000ul;
 #endif
 
   /* connect USB0 to PLL0 which is set to 480 MHz */
@@ -66,22 +69,6 @@ void CPU_ConfigureClocks(void)
   LPC_CGU->IDIVB_CTRL = ((2 - 1) << 2) | (1 << 11) | (0x0C << 24);  // setup IDIVB divider for IDIVA/2
   /*                       AUTOBLOCK   CLK_SEL=IDIVB */
   LPC_CGU->BASE_USB1_CLK = (1 << 11) | (0x0D << 24);  //  connect USB1_CLK to IDIVB
-
-#if 0
-  /* nni: connect SSP0 and SSP1 to the PLL1 */
-  CGU_EntityConnect(CGU_CLKSRC_PLL1, CGU_BASE_SSP0);
-  Delay300();  // delay at least 300 µs
-  CGU_EntityConnect(CGU_CLKSRC_PLL1, CGU_BASE_SSP1);
-  Delay300();  // delay at least 300 µs
-  CGU_UpdateClock();
-#endif
-
-#if 0  // these variables are for monitoring the frequencies while development
-	volatile uint32_t usb0Clk = CGU_GetPCLKFrequency(CGU_PERIPHERAL_USB0);
-	volatile uint32_t cpuClk = CGU_GetPCLKFrequency(CGU_PERIPHERAL_M3CORE);
-	volatile uint32_t uartClk = CGU_GetPCLKFrequency(CGU_PERIPHERAL_UART0);
-	volatile uint32_t usb1Clk = CGU_GetPCLKFrequency(CGU_PERIPHERAL_USB1);
-#endif
 }
 
 /******************************************************************************/

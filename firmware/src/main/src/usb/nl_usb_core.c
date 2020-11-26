@@ -35,6 +35,7 @@ static void     EnableEP(uint8_t const port, uint32_t const EPNum);
 static void     DisableEP(uint8_t const port, uint32_t const EPNum);
 static void     EndPoint0(uint8_t const port, uint32_t const event);
 static void     Handler(uint8_t const port);
+static void     ClearDTD(uint8_t const port, uint32_t Edpt);
 
 static DQH_T ep_QH_0[EP_NUM_MAX] __attribute__((aligned(2048)));
 static DQH_T ep_QH_1[EP_NUM_MAX] __attribute__((aligned(2048)));
@@ -887,11 +888,16 @@ void USB_ResetEP(uint8_t const port, uint32_t const EPNum)
 {
   uint32_t bit_pos = USB_EP_BITPOS(EPNum);
   uint32_t lep     = EPNum & 0x0F;
+  uint32_t ep      = EPAdr(EPNum);
 
   /* flush EP buffers */
-  usb[port].hardware->ENDPTFLUSH = (1 << bit_pos);
-  while (usb[port].hardware->ENDPTFLUSH & (1 << bit_pos))
-    ;
+  do
+  {
+    usb[port].hardware->ENDPTFLUSH = (1 << bit_pos);
+    while (usb[port].hardware->ENDPTFLUSH & (1 << bit_pos))
+      asm volatile("nop");
+  } while ((usb[port].hardware->ENDPTSTAT & (1 << bit_pos)) != 0);
+
   /* reset data toggles */
   if (EPNum & 0x80)
   {
@@ -901,6 +907,12 @@ void USB_ResetEP(uint8_t const port, uint32_t const EPNum)
   {
     ((uint32_t *) &(usb[port].hardware->ENDPTCTRL0))[lep] |= EPCTRL_RXR;
   }
+
+  /* clear any open transfer descriptors */
+  // Needed to clear stale descriptors for this which are still scanned for pending transfers
+  // Only non-control EPs (data endpoints) will be cleared
+  if (ep >= 2)
+    ClearDTD(port, ep);
 }
 
 /******************************************************************************/
@@ -1345,125 +1357,131 @@ static inline void Handler(uint8_t const port)
 {
   uint32_t disr, val, n;
 
-  disr                         = usb[port].hardware->USBSTS_D; /* Device Interrupt Status */
-  usb[port].hardware->USBSTS_D = disr;
-
-  /* Device Status Interrupt (Reset, Connect change, Suspend/Resume) */
-  if (disr & USBSTS_URI) /* Reset */
+  do  // repeat checking IRQ sources as several might have piled up before AND during the execution of the handler
   {
-    Reset(port);
-    USB_ResetCore(port);
-    return;
-  }
+    disr                         = usb[port].hardware->USBSTS_D;  // Device Interrupt Status
+    usb[port].hardware->USBSTS_D = disr;                          // writing it clear interrupt flags
+    if (disr == 0)                                                // no more pending IRQs ?
+      return;
 
-  if (disr & USBSTS_SLI) /* Suspend */
-  {
-    usb[port].activity                   = 1;
-    usb[port].connectionEstablished      = 0;
-    usb[port].gotConfigDescriptorRequest = 0;
-  }
+    // handling sorted by priority
 
-  if (disr & USBSTS_PCI) /* Resume */
-  {
-    usb[port].activity                   = 1;
-    usb[port].connectionEstablished      = 1;
-    usb[port].gotConfigDescriptorRequest = 0;
-    /* check if device is operating in HS mode or full speed */
-    usb[port].DevStatusFS2HS = ((port == 0) && (usb[port].hardware->PORTSC1_D & (1 << 9)));  // only port USB0 can be high-speed
-  }
-
-  /* handle setup status interrupts */
-  val = usb[port].hardware->ENDPTSETUPSTAT;
-  /* Only EP0 will have setup packets so call EP0 handler */
-  if (val)
-  {
-    usb[port].activity = 1;
-    /* Clear the endpoint complete CTRL OUT & IN when */
-    /* a Setup is received */
-    usb[port].hardware->ENDPTCOMPLETE = 0x00010001;
-    /* enable NAK inetrrupts */
-    usb[port].hardware->ENDPTNAKEN |= 0x00010001;
-
-    usb[port].P_EPCallback[0](port, USB_EVT_SETUP);
-  }
-
-  /* handle completion interrupts */
-  val = usb[port].hardware->ENDPTCOMPLETE;
-  if (val)
-  {
-    usb[port].activity           = 1;
-    usb[port].hardware->ENDPTNAK = val;
-
-    /* EP 0 - OUT */
-    if (val & 1)
+    /* handle setup status interrupts */
+    val = usb[port].hardware->ENDPTSETUPSTAT;
+    /* Only EP0 will have setup packets so call EP0 handler */
+    if (val)
     {
-      usb[port].hardware->ENDPTCOMPLETE = 1;
-      usb[port].P_EPCallback[0](port, USB_EVT_OUT);
-    }
-    /* EP 0 - IN */
-    if (val & (1 << 16))
-    {
-      usb[port].ep_TD[1].total_bytes &= 0xC0;
-      usb[port].hardware->ENDPTCOMPLETE = (1 << 16);
-      usb[port].P_EPCallback[0](port, USB_EVT_IN);
-    }
-    /* EP 1 - OUT */
-    if (val & 2)
-    {
-      usb[port].hardware->ENDPTCOMPLETE = 2;
-      usb[port].P_EPCallback[1](port, USB_EVT_OUT);
-    }
-    /* EP 1 - IN */
-    if (val & (1 << 17))
-    {
-      usb[port].ep_TD[3].total_bytes &= 0xC0;
-      usb[port].hardware->ENDPTCOMPLETE = (1 << 17);
-      usb[port].P_EPCallback[1](port, USB_EVT_IN);
-    }
-    /* EP 2 - IN */
-    if (val & (1 << 18))
-    {
-      usb[port].ep_TD[5].total_bytes &= 0xC0;
-      usb[port].hardware->ENDPTCOMPLETE = (1 << 18);
-      usb[port].P_EPCallback[2](port, USB_EVT_IN);
-    }
-  }
+      usb[port].activity = 1;
+      /* Clear the endpoint complete CTRL OUT & IN when */
+      /* a Setup is received */
+      usb[port].hardware->ENDPTCOMPLETE = 0x00010001;
+      /* enable NAK interrupts */
+      usb[port].hardware->ENDPTNAKEN |= 0x00010001;
 
-  if (disr & USBSTS_NAKI)
-  {
-    val = usb[port].hardware->ENDPTNAK;
-    val &= usb[port].hardware->ENDPTNAKEN;
-    /* handle NAK interrupts */
+      usb[port].P_EPCallback[0](port, USB_EVT_SETUP);
+    }
+
+    /* handle completion interrupts */
+    val = usb[port].hardware->ENDPTCOMPLETE;
     if (val)
     {
       usb[port].activity           = 1;
       usb[port].hardware->ENDPTNAK = val;
-      for (n = 0; n < EP_NUM_MAX / 2; n++)
+
+      /* EP 0 - OUT */
+      if (val & 1)
       {
-        if (val & (1 << n))
-          usb[port].P_EPCallback[n](port, USB_EVT_OUT_NAK);
-        if (val & (1 << (n + 16)))
-          usb[port].P_EPCallback[n](port, USB_EVT_IN_NAK);
+        usb[port].hardware->ENDPTCOMPLETE = 1;
+        usb[port].P_EPCallback[0](port, USB_EVT_OUT);
+      }
+      /* EP 0 - IN */
+      if (val & (1 << 16))
+      {
+        usb[port].ep_TD[1].total_bytes &= 0xC0;
+        usb[port].hardware->ENDPTCOMPLETE = (1 << 16);
+        usb[port].P_EPCallback[0](port, USB_EVT_IN);
+      }
+      /* EP 1 - OUT */
+      if (val & 2)
+      {
+        usb[port].hardware->ENDPTCOMPLETE = 2;
+        usb[port].P_EPCallback[1](port, USB_EVT_OUT);
+      }
+      /* EP 1 - IN */
+      if (val & (1 << 17))
+      {
+        usb[port].ep_TD[3].total_bytes &= 0xC0;
+        usb[port].hardware->ENDPTCOMPLETE = (1 << 17);
+        usb[port].P_EPCallback[1](port, USB_EVT_IN);
+      }
+      /* EP 2 - IN */
+      if (val & (1 << 18))
+      {
+        usb[port].ep_TD[5].total_bytes &= 0xC0;
+        usb[port].hardware->ENDPTCOMPLETE = (1 << 18);
+        usb[port].P_EPCallback[2](port, USB_EVT_IN);
       }
     }
-  }
 
-  /* Start of Frame Interrupt */
-  if (disr & USBSTS_SRI)
-  {
-    if (usb[port].SOF_Event)
-      usb[port].SOF_Event(port);
-  }
+    /* handle NAK interrupts */
+    if (disr & USBSTS_NAKI)
+    {
+      val = usb[port].hardware->ENDPTNAK;
+      val &= usb[port].hardware->ENDPTNAKEN;
+      if (val)
+      {
+        usb[port].activity           = 1;
+        usb[port].hardware->ENDPTNAK = val;
+        for (n = 0; n < EP_NUM_MAX / 2; n++)
+        {
+          if (val & (1 << n))
+            usb[port].P_EPCallback[n](port, USB_EVT_OUT_NAK);
+          if (val & (1 << (n + 16)))
+            usb[port].P_EPCallback[n](port, USB_EVT_IN_NAK);
+        }
+      }
+    }
 
-  /* Error Interrupt */
-  if (disr & USBSTS_UEI)
-  {
-    usb[port].activity = 1;
-  }
+    /* Start of Frame Interrupt */
+    if (disr & USBSTS_SRI)
+    {
+      if (usb[port].SOF_Event)
+        usb[port].SOF_Event(port);
+    }
 
-  if (usb[port].activity)
-    ;  // indicate general activity
-  return;
+    /* Device Status Interrupt (Reset, Connect change, Suspend/Resume) */
+    if (disr & USBSTS_URI) /* Reset */
+    {
+      Reset(port);
+      USB_ResetCore(port);
+      return;
+    }
+
+    if (disr & USBSTS_SLI) /* Suspend */
+    {
+      usb[port].activity                   = 1;
+      usb[port].connectionEstablished      = 0;
+      usb[port].gotConfigDescriptorRequest = 0;
+    }
+
+    if (disr & USBSTS_PCI) /* Resume */
+    {
+      usb[port].activity                   = 1;
+      usb[port].connectionEstablished      = 1;
+      usb[port].gotConfigDescriptorRequest = 0;
+      /* check if device is operating in HS mode or full speed */
+      usb[port].DevStatusFS2HS = ((port == 0) && (usb[port].hardware->PORTSC1_D & (1 << 9)));  // only port USB0 can be high-speed
+    }
+
+    /* Error Interrupt */
+    if (disr & USBSTS_UEI)
+    {
+      usb[port].activity = 1;
+    }
+
+    if (usb[port].activity)
+      ;  // indicate general activity
+  } while (1);
 }
 
 /******************************************************************************/
@@ -1496,6 +1514,18 @@ void USB_ProgDTD(uint8_t const port, uint32_t Edpt, uint32_t ptrBuff, uint32_t T
 
   usb[port].ep_QH[Edpt].next_dTD = (uint32_t)(&usb[port].ep_TD[Edpt]);
   usb[port].ep_QH[Edpt].total_bytes &= (~0xC0);
+}
+
+static void ClearDTD(uint8_t const port, uint32_t Edpt)
+{
+  DTD_T *pDTD;
+
+  pDTD = (DTD_T *) &usb[port].ep_TD[Edpt];
+
+  /* Zero out the device transfer descriptors */
+  memset((void *) pDTD, 0, sizeof(DTD_T));
+  /* The next DTD pointer is INVALID */
+  pDTD->next_dTD = 0x01;
 }
 
 /******************************************************************************/

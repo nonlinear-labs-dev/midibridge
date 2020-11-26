@@ -185,7 +185,6 @@ void USB_MIDI_DropMessages(uint8_t const port, uint8_t const drop)
 /** @brief		Suspend further receives
     @param[in]	suspend	!= 0--> suspend, == 0, normal
 *******************************************************************************/
-
 void USB_MIDI_SuspendReceive(uint8_t const port, uint8_t const suspend)
 {
   usbMidi[port].suspendReceive = suspend;
@@ -195,4 +194,13 @@ int USB_MIDI_SuspendReceiveGet(uint8_t const port)
 {
   return usbMidi[port].suspendReceive;
 }
+
+/******************************************************************************/
+/** @brief		Kill any active transmit
+*******************************************************************************/
+void USB_MIDI_KillTransmit(uint8_t const port)
+{
+  USB_ResetEP(port, 0x82);
+}
+
 // EOF

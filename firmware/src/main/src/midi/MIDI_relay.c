@@ -7,8 +7,7 @@
 #include "sys/nl_version.h"
 #include "sys/nl_stdlib.h"
 
-#define A (0)
-#define B (1)
+#define PACKET_TIMEOUT (8000ul)  // in 125us units, 8000*0.125ms = 1s
 
 typedef enum
 {
@@ -16,7 +15,8 @@ typedef enum
   RECEIVED,
   TRANSMITTING,
   WAIT_FOR_XMIT_READY,
-  WAIT_FOR_XMIT_DONE
+  WAIT_FOR_XMIT_DONE,
+  ABORTING,
 } PacketState_t;
 
 typedef struct
@@ -27,18 +27,27 @@ typedef struct
   int           remaining;
   int           toTransfer;
   int           index;
+  uint32_t      timeoutCntr;
+  int           timeoutFlag;
 } PacketTransfer_t;
 
 static PacketTransfer_t packetTransfer[2];  // port number is for outgoing port
 
 static inline void packetTransferReset(uint8_t const port)
 {
-  packetTransfer[port].state = IDLE;
+  PacketTransfer_t *p = &(packetTransfer[port]);
+  p->state            = IDLE;
   USB_MIDI_SuspendReceive(port ^ 1, 0);  // keep receiver enabled
-  packetTransfer[port].pData     = NULL;
-  packetTransfer[port].len       = 0;
-  packetTransfer[port].remaining = 0;
-  packetTransfer[port].index     = 0;
+  p->pData       = NULL;
+  p->len         = 0;
+  p->remaining   = 0;
+  p->index       = 0;
+  p->timeoutCntr = 0;
+  p->timeoutFlag = 0;
+}
+
+static inline void abortTransfer(uint8_t const port)
+{
 }
 
 static inline void checkSends(uint8_t const port)
@@ -51,8 +60,66 @@ static inline void checkSends(uint8_t const port)
     return;
   }
 
+  PacketTransfer_t *p = &(packetTransfer[port]);
+
+  if (p->state >= TRANSMITTING)
+  {
+    if (p->timeoutFlag)
+    {
+      p->timeoutFlag = 0;
+      p->state       = ABORTING;
+    }
+  }
+
+  switch (p->state)
+  {
+    default:
+      break;
+
+    case RECEIVED:
+      p->remaining   = p->len;
+      p->index       = 0;
+      p->state       = TRANSMITTING;
+      p->timeoutCntr = PACKET_TIMEOUT;
+      p->timeoutFlag = 0;
+      // fall-through is on purpose
+
+    case TRANSMITTING:
+      if (p->remaining == 0)
+      {
+        p->state = IDLE;
+        USB_MIDI_SuspendReceive(port ^ 1, 0);  // re-enable receiver
+        break;
+      }
+      p->toTransfer = p->remaining;
+      if (p->toTransfer > USB_FS_BULK_SIZE)
+        p->toTransfer = USB_FS_BULK_SIZE;  // limit to packet size for Full-Speed
+      p->state = WAIT_FOR_XMIT_READY;
+      // fall-through is on purpose
+
+    case WAIT_FOR_XMIT_READY:
+      if (USB_MIDI_Send(port, &(p->pData[p->index]), p->toTransfer) < 0)
+        break;  /// could not start transfer now, try later
+      p->state = WAIT_FOR_XMIT_DONE;
+      break;
+
+    case WAIT_FOR_XMIT_DONE:
+      if (USB_MIDI_BytesToSend(port) > 0)
+        break;  // still sending...
+      p->remaining -= p->toTransfer;
+      p->index += p->toTransfer;
+      p->state = TRANSMITTING;
+      break;
+    case ABORTING:
+      packetTransferReset(port);
+      __enable_irq();
+      USB_MIDI_KillTransmit(port);
+      break;
+  }
+  __enable_irq();
+
   // display
-  switch (packetTransfer[port].state)
+  switch (p->state)
   {
     case IDLE:
       LED_SetDirect(port, 0b000);  // OFF
@@ -65,47 +132,10 @@ static inline void checkSends(uint8_t const port)
     case WAIT_FOR_XMIT_DONE:
       LED_SetDirect(port, 0b011);  // YELLOW
       break;
-  }
-
-  switch (packetTransfer[port].state)
-  {
-    default:
-      break;
-
-    case RECEIVED:
-      packetTransfer[port].remaining = packetTransfer[port].len;
-      packetTransfer[port].index     = 0;
-      packetTransfer[port].state     = TRANSMITTING;
-      // fall-through is on purpose
-
-    case TRANSMITTING:
-      if (packetTransfer[port].remaining == 0)
-      {
-        packetTransfer[port].state = IDLE;
-        USB_MIDI_SuspendReceive(port ^ 1, 0);  // re-enable receiver
-        break;
-      }
-      packetTransfer[port].toTransfer = packetTransfer[port].remaining;
-      if (packetTransfer[port].toTransfer > USB_FS_BULK_SIZE)
-        packetTransfer[port].toTransfer = USB_FS_BULK_SIZE;  // limit to packet size for Full-Speed
-      packetTransfer[port].state = WAIT_FOR_XMIT_READY;
-      // fall-through is on purpose
-
-    case WAIT_FOR_XMIT_READY:
-      if (USB_MIDI_Send(port, &(packetTransfer[port].pData[packetTransfer[port].index]), packetTransfer[port].toTransfer) < 0)
-        break;  /// could not start transfer now, try later
-      packetTransfer[port].state = WAIT_FOR_XMIT_DONE;
-      break;
-
-    case WAIT_FOR_XMIT_DONE:
-      if (USB_MIDI_BytesToSend(port) > 0)
-        break;  // still sending...
-      packetTransfer[port].remaining -= packetTransfer[port].toTransfer;
-      packetTransfer[port].index += packetTransfer[port].toTransfer;
-      packetTransfer[port].state = TRANSMITTING;
+    case ABORTING:
+      LED_SetDirect(port, 0b101);  // MAGENTA
       break;
   }
-  __enable_irq();
 }
 
 void MIDI_Relay_ProcessFast(void)
@@ -152,6 +182,20 @@ static void Receive_IRQ_Callback(uint8_t const port, uint8_t *buff, uint32_t len
 
 static void Send_IRQ_Callback(uint8_t const port)
 {
+}
+
+void MIDI_Relay_TickerInterrupt(void)
+{
+  if (packetTransfer[0].timeoutCntr)
+  {
+    if (--packetTransfer[0].timeoutCntr == 0)
+      packetTransfer[0].timeoutFlag = 1;
+  }
+  if (packetTransfer[1].timeoutCntr)
+  {
+    if (--packetTransfer[1].timeoutCntr == 0)
+      packetTransfer[1].timeoutFlag = 1;
+  }
 }
 
 void MIDI_Relay_Init(void)
