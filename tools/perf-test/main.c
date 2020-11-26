@@ -15,7 +15,6 @@
 #include <alsa/asoundlib.h>
 
 #define PAYLOAD_BUFFER_SIZE (100000ul)
-#define PAYLOAD_SIZE        (3000ul)  // encoded payload transfer size, >= 8, <= PAYLOAD_BUFFER_SIZE !!
 
 #define RAW_TX_BUFFER_SIZE (PAYLOAD_BUFFER_SIZE * 2ul)  // need headroom for 8-to-7 bit encoding of the payload
 #define RAW_RX_BUFFER_SIZE (PAYLOAD_BUFFER_SIZE * 2ul)  // should have headroom for 8-to-7 bit encoding of the payload
@@ -40,10 +39,18 @@ static void error(char const *const format, ...)
 {
   va_list ap;
 
+  putc('\n', stderr);
   va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
   putc('\n', stderr);
+}
+
+static void cursorUp(uint8_t lines)
+{
+  char buffer[12];
+  sprintf(buffer, "\033[%dA", lines);
+  printf("%s", buffer);
 }
 
 static void usage(void)
@@ -179,14 +186,20 @@ static inline void doSend(void)
     return;
   }
 
-  messageLen = encodeSysex(dataBuf, PAYLOAD_SIZE, sendBuf);
-  printf("sysex size: %d\n", messageLen);
+  // messageLen = encodeSysex(dataBuf, PAYLOAD_SIZE, sendBuf);
+  // printf("sysex size: %d\n", messageLen);
+  uint64_t messageNo = 0;
   do
   {
     memset(dataBuf, 0x55, sizeof(dataBuf));
-    *((uint64_t *) dataBuf) = getTimeUSec();
-    messageLen              = encodeSysex(dataBuf, PAYLOAD_SIZE, sendBuf);
-    int total               = 0;
+    ((uint64_t *) dataBuf)[0] = getTimeUSec();
+    ((uint64_t *) dataBuf)[1] = messageNo++;
+
+    unsigned expo = ((unsigned) rand()) & 0b111;  // 0..7
+    int      size = 1 << (expo + 4);              // 2^4(16)...2^11(2048)
+
+    messageLen = encodeSysex(dataBuf, size, sendBuf);
+    int total  = 0;
     while (total != messageLen)
     {
       int toTransfer = messageLen - total;
@@ -234,17 +247,33 @@ static inline void doSend(void)
 // -------- functions for receiving --------
 //
 
+uint64_t packetCntr;
+
 static inline BOOL examineContent(void const *const data, int const len)
 {
-  if (len != PAYLOAD_SIZE)
+  if (len < 16)
   {
-    error("receive: payload has wrong length %d, expected %d", len, PAYLOAD_SIZE);
+    error("receive: payload has wrong minimum length %d, expected %d", len, 16);
     return FALSE;
   }
 
-  uint64_t const *const pTime = data;
-  uint64_t const        now   = getTimeUSec();
-  uint64_t              time  = now - *pTime;
+  printf("%05d\n", len);
+  cursorUp(1);
+
+  uint64_t const packetNumber = ((uint64_t *) data)[1];
+  if (packetCntr++ != 0)
+  {
+    if (packetNumber != packetCntr)
+    {
+      error("receive: packet has wrong number %lu, expected %lu", packetNumber, packetCntr);
+      return FALSE;
+    }
+  }
+  packetCntr = packetNumber;
+
+  uint64_t const packetTime = ((uint64_t *) data)[0];
+  uint64_t const now        = getTimeUSec();
+  uint64_t       time       = now - packetTime;
 
   static uint64_t min = ~(uint64_t) 0;
   static uint64_t max = 0;
@@ -260,10 +289,12 @@ static inline BOOL examineContent(void const *const data, int const len)
 
   if (cnt % 100 == 0)
   {
-    printf("min:%10.3lfms max:%10.3lfms avg:%10.3lfms\n",
+    printf("      %10.3lfms(min) %10.3lfms(max) %10.3lfms(avg)\n",
            ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt);
+    cursorUp(1);
     fflush(stdout);
   }
+
   return TRUE;
 }
 
