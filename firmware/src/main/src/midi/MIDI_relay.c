@@ -1,4 +1,5 @@
 //#include "MIDI_relay.h"
+#include "usb/nl_usb_core.h"
 #include "usb/nl_usb_midi.h"
 #include "usb/nl_usb_descmidi.h"
 #include "io/pins.h"
@@ -7,8 +8,8 @@
 #include "sys/nl_version.h"
 #include "sys/nl_stdlib.h"
 
-#define PACKET_TIMEOUT (8000ul)  // in 125us units, 8000*0.125ms = 1s
-
+#define PACKET_TIMEOUT   (8000ul)  // in 125us units, 8000*0.125ms = 1s
+#define ACTIVITY_TIMEOUT (800ul)   // in 125us units, 800*0.125ms = 0.1s
 typedef enum
 {
   IDLE = 0,
@@ -46,8 +47,24 @@ static inline void packetTransferReset(uint8_t const port)
   p->timeoutFlag = 0;
 }
 
-static inline void abortTransfer(uint8_t const port)
+static inline void displayTransfer(uint8_t const port)
 {
+  PacketTransfer_t *p = &(packetTransfer[port]);
+  switch (p->state)
+  {
+    case IDLE:
+      LED_SetDirect(port, 0b000);  // OFF
+      break;
+    case RECEIVED:
+    case TRANSMITTING:
+    case WAIT_FOR_XMIT_READY:
+      LED_SetDirect(port, 0b111);  // WHITE
+      break;
+    case WAIT_FOR_XMIT_DONE:
+    case ABORTING:
+      LED_SetDirect(port, 0b011);  // YELLOW
+      break;
+  }
 }
 
 static inline void checkSends(uint8_t const port)
@@ -55,6 +72,7 @@ static inline void checkSends(uint8_t const port)
   __disable_irq();
   if (!USB_MIDI_IsConfigured(port))
   {
+    LED_SetDirect(port, 0b100);  // BLUE
     packetTransferReset(port);
     __enable_irq();
     return;
@@ -92,8 +110,8 @@ static inline void checkSends(uint8_t const port)
         break;
       }
       p->toTransfer = p->remaining;
-      if (p->toTransfer > USB_FS_BULK_SIZE)
-        p->toTransfer = USB_FS_BULK_SIZE;  // limit to packet size for Full-Speed
+      if (p->toTransfer > USB_FS_BULK_SIZE)  // we're handling the chunks ourselves,
+        p->toTransfer = USB_FS_BULK_SIZE;    // so limit to packet size for Full-Speed
       p->state = WAIT_FOR_XMIT_READY;
       // fall-through is on purpose
 
@@ -118,24 +136,7 @@ static inline void checkSends(uint8_t const port)
   }
   __enable_irq();
 
-  // display
-  switch (p->state)
-  {
-    case IDLE:
-      LED_SetDirect(port, 0b000);  // OFF
-      break;
-    case RECEIVED:
-      LED_SetDirect(port, 0b010);  // GREEN
-      break;
-    case TRANSMITTING:
-    case WAIT_FOR_XMIT_READY:
-    case WAIT_FOR_XMIT_DONE:
-      LED_SetDirect(port, 0b011);  // YELLOW
-      break;
-    case ABORTING:
-      LED_SetDirect(port, 0b101);  // MAGENTA
-      break;
-  }
+  displayTransfer(port);
 }
 
 void MIDI_Relay_ProcessFast(void)
