@@ -8,8 +8,13 @@
 #include "sys/nl_version.h"
 #include "sys/nl_stdlib.h"
 
-#define PACKET_TIMEOUT   (8000ul)  // in 125us units, 8000*0.125ms = 1s
-#define ACTIVITY_TIMEOUT (800ul)   // in 125us units, 800*0.125ms = 0.1s
+#define PACKET_TIMEOUT             (8000ul)   // in 125us units, 8000*0.125ms = 1s      until packet is aborted
+#define LATE_TIME                  (10ul)     // in 125us units, 10*0.125ms   = 1.25ms  until packet is marked as LATE
+#define STALE_TIME                 (240ul)    // in 125us units, 240*0.125ms  = 30ms    until packet is marked as STALE
+#define REALTIME_INDICATOR_TIMEOUT (160ul)    // in 125us units, 20ms display of  any real-time packets
+#define LATE_INDICATOR_TIMEOUT     (16000ul)  // in 125us units, 2s display of any late packets
+#define STALE_INDICATOR_TIMEOUT    (48000ul)  // in 125us units, 6s display of any stale packets
+
 typedef enum
 {
   IDLE = 0,
@@ -20,16 +25,41 @@ typedef enum
   ABORTING,
 } PacketState_t;
 
+typedef enum
+{
+  REALTIME = 0,
+  LATE,
+  STALE,
+} PacketLatency_t;
+
 typedef struct
 {
-  PacketState_t state;
-  uint8_t *     pData;
-  int32_t       len;
-  int           remaining;
-  int           toTransfer;
-  int           index;
-  uint32_t      timeoutCntr;
-  int           timeoutFlag;
+  uint32_t realtimeCntr;
+  uint32_t lateCntr;
+  uint32_t staleCntr;
+} PortStatus_t;
+
+static PortStatus_t portStatus[2];
+
+static inline void portStatusReset(uint8_t const port)
+{
+  PortStatus_t *p = &(portStatus[port]);
+  p->realtimeCntr = 0;
+  p->lateCntr     = 0;
+  p->staleCntr    = 0;
+}
+
+typedef struct
+{
+  PacketState_t   state;
+  PacketLatency_t latency;
+  uint8_t *       pData;
+  int32_t         len;
+  int             remaining;
+  int             toTransfer;
+  int             index;
+  uint32_t        timeoutCntr;
+  int             timeoutFlag;
 } PacketTransfer_t;
 
 static PacketTransfer_t packetTransfer[2];  // port number is for outgoing port
@@ -45,26 +75,77 @@ static inline void packetTransferReset(uint8_t const port)
   p->index       = 0;
   p->timeoutCntr = 0;
   p->timeoutFlag = 0;
+  p->latency     = REALTIME;
 }
 
-static inline void displayTransfer(uint8_t const port)
-{
-  PacketTransfer_t *p = &(packetTransfer[port]);
-  switch (p->state)
+#define DIM_PWM (15)
+static inline void displayStatus(uint8_t const port)
+{  // display traffic/port state from an incoming(receiving) viewpoint
+  static int cntr[2]   = { DIM_PWM, DIM_PWM };
+  static int reload[2] = { DIM_PWM, DIM_PWM };
+  int        output    = 0;
+  int        color     = 0;
+
+  if (!--cntr[port])
   {
-    case IDLE:
-      LED_SetDirect(port, 0b000);  // OFF
-      break;
-    case RECEIVED:
-    case TRANSMITTING:
-    case WAIT_FOR_XMIT_READY:
-      LED_SetDirect(port, 0b111);  // WHITE
-      break;
-    case WAIT_FOR_XMIT_DONE:
-    case ABORTING:
-      LED_SetDirect(port, 0b011);  // YELLOW
-      break;
+    cntr[port] = reload[port];
+    output     = 1;
   }
+
+  uint8_t           sendPort  = port ^ 1;
+  PortStatus_t *    s         = &(portStatus[port]);          // display is for this receiving port
+  PacketTransfer_t *p         = &(packetTransfer[sendPort]);  // but packet state comes from the sending port
+  int               connected = USB_MIDI_IsConfigured(port);
+
+  if (connected)
+    reload[port] = DIM_PWM;
+  else
+    reload[port] = 600 * DIM_PWM;
+
+  do  // do {} while (0) loop is a helper so we can use break statements
+  {
+    if (!connected)
+    {  // not up
+      int powered = (port == 0) ? pinUSB0_VBUS : pinUSB1_VBUS;
+      if (powered)
+        color = 0b101;  // dim magenta
+      else
+        color = 0b100;  // dim blue
+      break;
+    }
+
+    if (p->state == IDLE)
+    {  // no outgoing packet on the run
+      if (s->staleCntr)
+        color = 0b001;  // dim red
+      else if (s->lateCntr)
+        color = 0b011;  // dim orange
+      else
+        color = 0b010;  // dim green
+
+      if (s->realtimeCntr)
+      {
+        output = 1;  // force output while monoflop is running
+        switch (p->latency)
+        {
+          case REALTIME:
+            color = 0b010;  // GREEN
+            break;
+          case LATE:
+            color = 0b011;  // YELLOW
+            break;
+          case STALE:
+            color = 0b001;  // RED
+            break;
+        }
+      }
+      break;
+    }
+  } while (0);
+
+  if (!output)
+    color = 0;
+  LED_SetDirect(port, color);
 }
 
 static inline void checkSends(uint8_t const port)
@@ -72,13 +153,14 @@ static inline void checkSends(uint8_t const port)
   __disable_irq();
   if (!USB_MIDI_IsConfigured(port))
   {
-    LED_SetDirect(port, 0b100);  // BLUE
     packetTransferReset(port);
     __enable_irq();
     return;
   }
 
-  PacketTransfer_t *p = &(packetTransfer[port]);
+  PacketTransfer_t *p           = &(packetTransfer[port]);
+  uint8_t           receivePort = port ^ 1;
+  PortStatus_t *    s           = &(portStatus[receivePort]);  // display is for other, receiving port
 
   if (p->state >= TRANSMITTING)
   {
@@ -87,6 +169,37 @@ static inline void checkSends(uint8_t const port)
       p->timeoutFlag = 0;
       p->state       = ABORTING;
     }
+    s->realtimeCntr = REALTIME_INDICATOR_TIMEOUT;
+    if (p->timeoutCntr + LATE_TIME < PACKET_TIMEOUT)
+    {
+      p->latency  = LATE;
+      s->lateCntr = LATE_INDICATOR_TIMEOUT;
+    }
+    if (p->timeoutCntr + STALE_TIME < PACKET_TIMEOUT)
+    {
+      p->latency   = STALE;
+      s->staleCntr = STALE_INDICATOR_TIMEOUT;
+    }
+
+    int color;
+    switch (p->latency)
+    {
+      case REALTIME:
+        if (s->staleCntr)
+          color = 0b101;  // MAGENTA
+        else if (s->lateCntr)
+          color = 0b011;  // YELLOW
+        else
+          color = 0b110;  // CYAN
+        break;
+      case LATE:
+        color = 0b011;  // WHITE
+        break;
+      case STALE:
+        color = 0b001;  // RED
+        break;
+    }
+    LED_SetDirect(receivePort, color);
   }
 
   switch (p->state)
@@ -100,6 +213,7 @@ static inline void checkSends(uint8_t const port)
       p->state       = TRANSMITTING;
       p->timeoutCntr = PACKET_TIMEOUT;
       p->timeoutFlag = 0;
+      p->latency     = REALTIME;
       // fall-through is on purpose
 
     case TRANSMITTING:
@@ -135,8 +249,6 @@ static inline void checkSends(uint8_t const port)
       break;
   }
   __enable_irq();
-
-  displayTransfer(port);
 }
 
 void MIDI_Relay_ProcessFast(void)
@@ -147,6 +259,8 @@ void MIDI_Relay_ProcessFast(void)
 
 void MIDI_Relay_Process(void)
 {
+  displayStatus(0);
+  displayStatus(1);
 }
 
 // ------------------------------------------------------------
@@ -154,8 +268,8 @@ void MIDI_Relay_Process(void)
 static void Receive_IRQ_Callback(uint8_t const port, uint8_t *buff, uint32_t len)
 {
   if (len > 512)
-  {  // we should never receive a packet when not IDLE
-    LED_SetDirectAndHalt(0b101);
+  {    // we should never receive a packet longer than the 512 FS bulk size max
+    ;  //LED_SetDirectAndHalt(0b111);
   }
 
   if (len == 0)
@@ -165,6 +279,7 @@ static void Receive_IRQ_Callback(uint8_t const port, uint8_t *buff, uint32_t len
   if (!USB_MIDI_IsConfigured(outgoingPort))  // output side not ready ?
   {
     packetTransferReset(outgoingPort);
+    portStatus[port].staleCntr = LATE_INDICATOR_TIMEOUT;
     return;
   }
 
@@ -187,15 +302,19 @@ static void Send_IRQ_Callback(uint8_t const port)
 
 void MIDI_Relay_TickerInterrupt(void)
 {
-  if (packetTransfer[0].timeoutCntr)
+  for (int i = 0; i < 2; i++)
   {
-    if (--packetTransfer[0].timeoutCntr == 0)
-      packetTransfer[0].timeoutFlag = 1;
-  }
-  if (packetTransfer[1].timeoutCntr)
-  {
-    if (--packetTransfer[1].timeoutCntr == 0)
-      packetTransfer[1].timeoutFlag = 1;
+    if (packetTransfer[i].timeoutCntr)
+    {
+      if (--packetTransfer[i].timeoutCntr == 0)
+        packetTransfer[i].timeoutFlag = 1;
+    }
+    if (portStatus[i].realtimeCntr)
+      portStatus[i].realtimeCntr--;
+    if (portStatus[i].lateCntr)
+      portStatus[i].lateCntr--;
+    if (portStatus[i].staleCntr)
+      portStatus[i].staleCntr--;
   }
 }
 
