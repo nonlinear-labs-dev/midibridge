@@ -207,7 +207,7 @@ static inline void doSend(void)
       if ((err = snd_rawmidi_status(port, pStatus)))
       {
         error("cannot get status: %s", snd_strerror(errno));
-        break;
+        return;
       }
       int avail = snd_rawmidi_status_get_avail(pStatus);
       if (toTransfer > avail)
@@ -235,6 +235,9 @@ static inline void doSend(void)
       total += written;
       time = getTimeUSec() - time;
       // printf("sleeping %lu usecs.\n", time);
+      time *= 1 + (((unsigned) rand()) & 0x1F);
+      if (time > 1000ul * 1000ul)
+        time = 1000ul * 1000ul;
       usleep(time);
     }
     if (written != total)
