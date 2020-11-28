@@ -39,7 +39,6 @@ static void error(char const *const format, ...)
 {
   va_list ap;
 
-  putc('\n', stderr);
   va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
@@ -188,18 +187,34 @@ static inline void doSend(void)
 
   // messageLen = encodeSysex(dataBuf, PAYLOAD_SIZE, sendBuf);
   // printf("sysex size: %d\n", messageLen);
-  uint64_t messageNo = 0;
+  uint8_t  runningCntr = 0;
+  uint64_t messageNo   = 0;
+
+  printf("Sending data to port: %s\n\n\n", pName);
+
   do
   {
-    memset(dataBuf, 0x55, sizeof(dataBuf));
-    ((uint64_t *) dataBuf)[0] = getTimeUSec();
-    ((uint64_t *) dataBuf)[1] = messageNo++;
+    memset(dataBuf, runningCntr++, sizeof(dataBuf));
+    if (runningCntr >= 128)
+      runningCntr = 0;
 
-    unsigned expo = ((unsigned) rand()) & 0b111;  // 0..7
-    int      size = 1 << (expo + 4);              // 2^4(16)...2^11(2048)
+    ((uint64_t *) dataBuf)[0] = getTimeUSec();
+    ((uint64_t *) dataBuf)[1] = messageNo;
+
+    unsigned expo = ((unsigned) rand()) % 11;  // 0..10
+    unsigned size = 1 << expo;                 // 2^0...2^10(1024)
+    size += ((unsigned) rand()) & (size - 1);  // 0..2047
+    size += 24;
+    ((uint64_t *) dataBuf)[2] = size;
+
+    cursorUp(1);
+    printf("n:%lu, s:%5u\n", messageNo++, size);
+    fflush(stdout);
 
     messageLen = encodeSysex(dataBuf, size, sendBuf);
     int total  = 0;
+
+    uint64_t messageTime = getTimeUSec();
     while (total != messageLen)
     {
       int toTransfer = messageLen - total;
@@ -210,7 +225,7 @@ static inline void doSend(void)
         return;
       }
       int avail = snd_rawmidi_status_get_avail(pStatus);
-      if (toTransfer > avail)
+      if (0)  //toTransfer > avail)
       {
         error("rawmidi send larger than buffer by: %d", toTransfer - avail);
         usleep(1000ul * SEND_WAIT_MS);
@@ -235,13 +250,46 @@ static inline void doSend(void)
       total += written;
       time = getTimeUSec() - time;
       // printf("sleeping %lu usecs.\n", time);
-      time *= 1 + (((unsigned) rand()) & 0x1F);
+      time *= 1 + (((unsigned) rand()) & 0xF);  // * 1..16
       if (time > 1000ul * 1000ul)
         time = 1000ul * 1000ul;
+
+      uint64_t sleepTime = getTimeUSec();
       usleep(time);
+      sleepTime = getTimeUSec() - sleepTime;
+      messageTime += sleepTime;
     }
     if (written != total)
       ;  //printf("total of %d bytes transferred\n", total);
+
+    messageTime = getTimeUSec() - messageTime;
+
+    static uint64_t min = ~(uint64_t) 0;
+    static uint64_t max = 0;
+    static uint32_t cnt = 0;
+    static uint64_t sum = 0;
+
+    if (messageTime > max)
+      max = messageTime;
+    if (messageTime < min)
+      min = messageTime;
+    sum += messageTime;
+    cnt++;
+
+    if (cnt == 1000)
+    {
+      cnt /= 2;
+      sum /= 2;
+    }
+    if (cnt % 50 == 0)
+    {
+      cursorUp(2);
+      printf("%6.2lfms(min) %6.1lfms(max) %6.1lfms(avg)\n\n",
+             ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt);
+      fflush(stdout);
+      max = max * 0.99;
+      min = min / 0.80;
+    }
 
   } while (TRUE);
 }
@@ -260,10 +308,10 @@ static inline BOOL examineContent(void const *const data, int const len)
     return FALSE;
   }
 
-  printf("%05d\n", len);
-  cursorUp(1);
-
+  uint64_t const packetTime   = ((uint64_t *) data)[0];
   uint64_t const packetNumber = ((uint64_t *) data)[1];
+  uint64_t const packetSize   = ((uint64_t *) data)[2];
+
   if (packetCntr++ != 0)
   {
     if (packetNumber != packetCntr)
@@ -274,9 +322,18 @@ static inline BOOL examineContent(void const *const data, int const len)
   }
   packetCntr = packetNumber;
 
-  uint64_t const packetTime = ((uint64_t *) data)[0];
-  uint64_t const now        = getTimeUSec();
-  uint64_t       time       = now - packetTime;
+  if (packetSize != len)
+  {
+    error("receive: packet has wrong length %lu, expected %lu", len, packetSize);
+    return FALSE;
+  }
+
+  cursorUp(1);
+  printf("n:%lu, s:%5lu\n", packetNumber, packetSize);
+  fflush(stdout);
+
+  uint64_t const now  = getTimeUSec();
+  uint64_t       time = now - packetTime;
 
   static uint64_t min = ~(uint64_t) 0;
   static uint64_t max = 0;
@@ -290,14 +347,20 @@ static inline BOOL examineContent(void const *const data, int const len)
   sum += time;
   cnt++;
 
-  if (cnt % 100 == 0)
+  if (cnt == 1000)
   {
-    printf("      %10.3lfms(min) %10.3lfms(max) %10.3lfms(avg)\n",
-           ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt);
-    cursorUp(1);
-    fflush(stdout);
+    cnt /= 2;
+    sum /= 2;
   }
-
+  if (cnt % 50 == 0)
+  {
+    cursorUp(2);
+    printf("%6.2lfms(min) %6.1lfms(max) %6.1lfms(avg)\n\n",
+           ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt);
+    fflush(stdout);
+    max = max * 0.99;
+    min = min / 0.80;
+  }
   return TRUE;
 }
 
@@ -393,6 +456,8 @@ static inline void doReceive(void)
   pfds  = alloca(npfds * sizeof(struct pollfd));
   snd_rawmidi_poll_descriptors(port, pfds, npfds);
   signal(SIGINT, sigHandler);
+
+  printf("Receiving data from port: %s\n\n\n", pName);
 
   do
   {
