@@ -24,30 +24,31 @@ typedef struct
 
 static UsbMidi_t usbMidi[2];
 
+// buffer sizes must match the values set up in the configuration descriptors !
+static uint8_t rxBuffer0[USB_HS_BULK_SIZE] __attribute__((aligned(4)));
+static uint8_t rxBuffer1[USB_FS_BULK_SIZE] __attribute__((aligned(4)));
+
+struct _rxBuffer
+{
+  uint8_t *data;
+  uint16_t size;
+} static rxBuffer[2] = {
+  {
+      .data = rxBuffer0,
+      .size = sizeof rxBuffer0,
+  },
+  {
+      .data = rxBuffer1,
+      .size = sizeof rxBuffer1,
+  },
+};
+
 /******************************************************************************/
 /** @brief		Endpoint 1 Callback
     @param[in]	event	Event that triggered the interrupt
 *******************************************************************************/
 static void EndPoint1_ReadFromHost(uint8_t const port, uint32_t const event)
 {
-  // buffer sizes must match the values set up in the configuration descriptors !
-  static uint8_t rxBuffer0[USB_HS_BULK_SIZE] __attribute__((aligned(4)));
-  static uint8_t rxBuffer1[USB_FS_BULK_SIZE] __attribute__((aligned(4)));
-
-  struct _rxBuffer
-  {
-    uint8_t *data;
-    uint16_t size;
-  } rxBuffer[2] = {
-    {
-        .data = rxBuffer0,
-        .size = sizeof rxBuffer0,
-    },
-    {
-        .data = rxBuffer1,
-        .size = sizeof rxBuffer1,
-    },
-  };
 
   switch (event)
   {

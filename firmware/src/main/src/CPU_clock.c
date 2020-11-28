@@ -31,8 +31,8 @@ void CPU_ConfigureClocks(void)
   Delay300();                                               // delay at least 300 µs
 
   /* STEP 1: set cpu to mid frequency (according to datasheet) */
-  CGU_SetPLL1(4);  // f_osc x 4 = 48 MHz
-  M4coreClock = 4ul * 12000000ul;
+  CGU_SetPLL1(6);  // f_osc x 6 = 72 MHz
+  M4coreClock = 6ul * 12000000ul;
   Delay300();                                 // delay at least 300 µs
   CGU_EnableEntity(CGU_CLKSRC_PLL1, ENABLE);  // Enable PLL1 after setting is done
   Delay300();                                 // delay at least 300 µs
