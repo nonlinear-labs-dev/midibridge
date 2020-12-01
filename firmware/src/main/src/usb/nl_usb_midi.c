@@ -49,20 +49,23 @@ struct _rxBuffer
 *******************************************************************************/
 static void EndPoint1_ReadFromHost(uint8_t const port, uint32_t const event)
 {
-
   switch (event)
   {
-    case USB_EVT_OUT:
+    case USB_EVT_OUT_NAK:  // host has data --> get a transfer running to collect it
+      if (!usbMidi[port].suspendReceive)
+        USB_ReadReqEP(port, 0x01, rxBuffer[port].data, rxBuffer[port].size);
+      break;
+
+    case USB_EVT_OUT:  // transfer finished successfully --> hand data over to application
     {
       uint32_t length = USB_ReadEP(port, 0x01);
       if (usbMidi[port].ReceiveCallback)
         usbMidi[port].ReceiveCallback(port, rxBuffer[port].data, length);
-    }
-    // fall-through is intentional
-    case USB_EVT_OUT_NAK:
+      // prepare the next potential transfer right now, to avoid extra NAK phase
       if (!usbMidi[port].suspendReceive)
         USB_ReadReqEP(port, 0x01, rxBuffer[port].data, rxBuffer[port].size);
       break;
+    }
   }
 }
 
@@ -72,11 +75,8 @@ static void EndPoint1_ReadFromHost(uint8_t const port, uint32_t const event)
 *******************************************************************************/
 static void EndPoint2_WriteToHost(uint8_t const port, uint32_t const event)
 {
-
   switch (event)
   {
-    case USB_EVT_IN_NAK:
-      break;
     case USB_EVT_IN:  // end of write out
       if (usbMidi[port].SendCallback)
         usbMidi[port].SendCallback(port);

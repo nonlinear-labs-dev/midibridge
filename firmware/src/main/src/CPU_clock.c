@@ -41,7 +41,7 @@ void CPU_ConfigureClocks(void)
   CGU_UpdateClock();
   Delay300();  // delay at least 300 µs
 
-#if 0
+#ifdef DEBUG
   /* STEP 2: set cpu to high frequency */
   CGU_SetPLL1(17);    // set PLL1 to: f_osc x 17 = 204 MHz
   Delay300();         // delay at least 300 µs

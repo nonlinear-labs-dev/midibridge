@@ -238,8 +238,8 @@ static inline void checkSends(uint8_t const port)
         break;
       }
       p->toTransfer = p->remaining;
-      if (p->toTransfer > USB_FS_BULK_SIZE)  // we're handling the chunks ourselves,
-        p->toTransfer = USB_FS_BULK_SIZE;    // so limit to packet size for Full-Speed
+      // if (p->toTransfer > USB_FS_BULK_SIZE)  // we're handling the chunks ourselves,
+      //   p->toTransfer = USB_FS_BULK_SIZE;    // so limit to packet size for Full-Speed
       p->state = WAIT_FOR_XMIT_READY;
       // fall-through is on purpose
 
@@ -283,8 +283,8 @@ void MIDI_Relay_Process(void)
 static void Receive_IRQ_Callback(uint8_t const port, uint8_t *buff, uint32_t len)
 {
   if (len > 512)
-  {    // we should never receive a packet longer than the 512 FS bulk size max
-    ;  //LED_SetDirectAndHalt(0b111);
+  {  // we should never receive a packet longer than the 512 FS bulk size max
+    LED_SetDirectAndHalt(0b111);
   }
 
   if (len == 0)
