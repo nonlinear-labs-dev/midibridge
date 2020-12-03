@@ -111,7 +111,7 @@ static inline void displayStatus(uint8_t const port)
   else
     reload[port] = BLINK_TIME;
 
-  do  // do {} while (0) loop is a helper so we can use break statements
+  do  // "do { } while (0)" loop is a helper so we can use break statements
   {
     if (!connected)
     {  // not up
@@ -280,7 +280,7 @@ void MIDI_Relay_Process(void)
 
 // ------------------------------------------------------------
 
-static void Receive_IRQ_Callback(uint8_t const port, uint8_t *buff, uint32_t len)
+static inline void Handler(uint8_t const port, uint8_t *buff, uint32_t len)
 {
   if (len > 512)
   {  // we should never receive a packet longer than the 512 FS bulk size max
@@ -316,8 +316,12 @@ static void Receive_IRQ_Callback(uint8_t const port, uint8_t *buff, uint32_t len
   USB_MIDI_SuspendReceive(port, 1);
 }
 
-static void Send_IRQ_Callback(uint8_t const port)
+static void Receive_IRQ_Callback(uint8_t const port, uint8_t *buff, uint32_t len)
 {
+  if (port == 0)
+    Handler(0, buff, len);
+  else
+    Handler(1, buff, len);
 }
 
 void MIDI_Relay_TickerInterrupt(void)
@@ -340,8 +344,8 @@ void MIDI_Relay_TickerInterrupt(void)
 
 void MIDI_Relay_Init(void)
 {
-  USB_MIDI_Config(0, Receive_IRQ_Callback, Send_IRQ_Callback);
-  USB_MIDI_Config(1, Receive_IRQ_Callback, Send_IRQ_Callback);
+  USB_MIDI_Config(0, Receive_IRQ_Callback);
+  USB_MIDI_Config(1, Receive_IRQ_Callback);
   USB_MIDI_Init(0);
   USB_MIDI_Init(1);
 }

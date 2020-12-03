@@ -17,7 +17,6 @@ typedef struct
 {
   uint32_t                     endOfBuffer;
   MidiReceiveComplete_Callback ReceiveCallback;
-  MidiSendComplete_Callback    SendCallback;
   uint8_t                      suspendReceive;
   uint8_t                      dropMessages;
 } UsbMidi_t;
@@ -47,7 +46,7 @@ struct _rxBuffer
 /** @brief		Endpoint 1 Callback
     @param[in]	event	Event that triggered the interrupt
 *******************************************************************************/
-static void EndPoint1_ReadFromHost(uint8_t const port, uint32_t const event)
+static void Handler_ReadFromHost(uint8_t const port, uint32_t const event)
 {
   switch (event)
   {
@@ -61,7 +60,7 @@ static void EndPoint1_ReadFromHost(uint8_t const port, uint32_t const event)
       uint32_t length = USB_ReadEP(port, 0x01);
       if (usbMidi[port].ReceiveCallback)
         usbMidi[port].ReceiveCallback(port, rxBuffer[port].data, length);
-      // prepare the next potential transfer right now, to avoid extra NAK phase
+      // prepare the next potential transfer right now to avoid extra NAK phase later
       if (!usbMidi[port].suspendReceive)
         USB_ReadReqEP(port, 0x01, rxBuffer[port].data, rxBuffer[port].size);
       break;
@@ -69,19 +68,14 @@ static void EndPoint1_ReadFromHost(uint8_t const port, uint32_t const event)
   }
 }
 
-/******************************************************************************/
-/** @brief		Endpoint 2 Callback
-    @param[in]	event	Event that triggered the interrupt
-*******************************************************************************/
-static void EndPoint2_WriteToHost(uint8_t const port, uint32_t const event)
+static void EndPoint1_ReadFromHost_0(uint8_t const port, uint32_t const event)
 {
-  switch (event)
-  {
-    case USB_EVT_IN:  // end of write out
-      if (usbMidi[port].SendCallback)
-        usbMidi[port].SendCallback(port);
-      break;
-  }
+  Handler_ReadFromHost(0, event);
+}
+
+static void EndPoint1_ReadFromHost_1(uint8_t const port, uint32_t const event)
+{
+  Handler_ReadFromHost(1, event);
 }
 
 /******************************************************************************/
@@ -96,8 +90,7 @@ void USB_MIDI_Init(uint8_t const port)
   USB_Core_Device_String_Descriptor_Set(port, (const uint8_t *) (port == 0) ? USB0_MIDI_StringDescriptor : USB1_MIDI_StringDescriptor);
   USB_Core_Device_Device_Quali_Descriptor_Set(port, (const uint8_t *) USB_MIDI_DeviceQualifier);
   /** assign callbacks */
-  USB_Core_Endpoint_Callback_Set(port, 1, EndPoint1_ReadFromHost);
-  USB_Core_Endpoint_Callback_Set(port, 2, EndPoint2_WriteToHost);
+  USB_Core_Endpoint_Callback_Set(port, 1, (port == 0) ? EndPoint1_ReadFromHost_0 : EndPoint1_ReadFromHost_1);
   USB_Core_Init(port);
 }
 
@@ -113,21 +106,9 @@ void USB_MIDI_DeInit(uint8_t const port)
  *  @param[in]	midircv		Pointer to the callback function for
  *  						the MIDI received data
 *******************************************************************************/
-void USB_MIDI_Config(uint8_t const port, MidiReceiveComplete_Callback midircv, MidiSendComplete_Callback midisend)
+void USB_MIDI_Config(uint8_t const port, MidiReceiveComplete_Callback midircv)
 {
   usbMidi[port].ReceiveCallback = midircv;
-  usbMidi[port].SendCallback    = midisend;
-}
-
-/******************************************************************************/
-/** @brief    Function that polls USB MIDI driver
-*******************************************************************************/
-void USB_MIDI_Poll(uint8_t const port)
-{
-  if (port == 0)
-    USB0_IRQHandler();
-  else
-    USB1_IRQHandler();
 }
 
 /******************************************************************************/
@@ -174,26 +155,12 @@ int32_t USB_MIDI_BytesToSend(uint8_t const port)
 }
 
 /******************************************************************************/
-/** @brief		Drop all messages written to the interface
-    @param[in]	drop	1 - drop future messages; 0 - do not drop future msgs
-*******************************************************************************/
-void USB_MIDI_DropMessages(uint8_t const port, uint8_t const drop)
-{
-  usbMidi[port].dropMessages = drop;
-}
-
-/******************************************************************************/
 /** @brief		Suspend further receives
     @param[in]	suspend	!= 0--> suspend, == 0, normal
 *******************************************************************************/
 void USB_MIDI_SuspendReceive(uint8_t const port, uint8_t const suspend)
 {
   usbMidi[port].suspendReceive = suspend;
-}
-
-int USB_MIDI_SuspendReceiveGet(uint8_t const port)
-{
-  return usbMidi[port].suspendReceive;
 }
 
 /******************************************************************************/
