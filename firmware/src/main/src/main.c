@@ -16,6 +16,7 @@
 #include "io/pins.h"
 #include "midi/MIDI_relay.h"
 #include "sys/nl_version.h"
+#include "sys/ticker.h"
 
 #define DBG_CLOCK_MONITOR (0)
 
@@ -81,8 +82,6 @@ void main(void)
 {
   Init();
 
-  while (waitForFirstSysTick)
-    ;
   /* MIDI relay */
   MIDI_Relay_Init();  // we wait until here because USB handlers are interrupt-driven and everything has to be set up
 
@@ -112,11 +111,6 @@ void M4SysTick_Init(void)
 
 void SysTick_Handler(void)
 {
-  if (waitForFirstSysTick)
-  {
-    waitForFirstSysTick = 0;
-    return;
-  }
+  ticker++;
   COOS_Update();
-  MIDI_Relay_TickerInterrupt();
 }

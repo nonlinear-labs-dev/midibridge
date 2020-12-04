@@ -8,11 +8,14 @@
 
 enum BASE_COLORS
 {
-  COLOR_OFF    = 0,
-  COLOR_BLUE   = 1,
-  COLOR_GREEN  = 2,
-  COLOR_ORANGE = 3,
-  COLOR_RED    = 4,
+  COLOR_OFF     = 0b000,
+  COLOR_RED     = 0b001,
+  COLOR_GREEN   = 0b010,
+  COLOR_BLUE    = 0b100,
+  COLOR_YELLOW  = 0b011,
+  COLOR_CYAN    = 0b110,
+  COLOR_MAGENTA = 0b101,
+  COLOR_WHITE   = 0b111,
 };
 
 void LED_SetDirect(uint8_t const ledId, uint8_t const rgb);

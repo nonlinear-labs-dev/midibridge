@@ -15,7 +15,6 @@
 
 typedef struct
 {
-  uint32_t                     endOfBuffer;
   MidiReceiveComplete_Callback ReceiveCallback;
   uint8_t                      suspendReceive;
   uint8_t                      dropMessages;
@@ -43,7 +42,7 @@ struct _rxBuffer
 };
 
 /******************************************************************************/
-/** @brief		Endpoint 1 Callback
+/** @brief		Endpoint 1 Callback (Data read from Host)
     @param[in]	event	Event that triggered the interrupt
 *******************************************************************************/
 static void Handler_ReadFromHost(uint8_t const port, uint32_t const event)
@@ -136,10 +135,7 @@ int32_t USB_MIDI_Send(uint8_t const port, uint8_t const *const buff, uint32_t co
   if (USB_Core_ReadyToWrite(port, 0x82))
   {
     if (cnt)
-    {
       USB_WriteEP(port, 0x82, (uint8_t *) buff, (uint32_t) cnt);
-      usbMidi[port].endOfBuffer = (uint32_t) buff + cnt;
-    }
     return cnt;
   }
   return -1;
@@ -151,7 +147,7 @@ int32_t USB_MIDI_Send(uint8_t const port, uint8_t const *const buff, uint32_t co
 *******************************************************************************/
 int32_t USB_MIDI_BytesToSend(uint8_t const port)
 {
-  return USB_Core_BytesToSend(port, usbMidi[port].endOfBuffer, 0x82);
+  return USB_Core_BytesToSend(port, 0x82);
 }
 
 /******************************************************************************/

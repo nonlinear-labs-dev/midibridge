@@ -12,6 +12,7 @@
 
 /* Definition for Midi Callback functions */
 typedef void (*MidiReceiveComplete_Callback)(uint8_t const port, uint8_t* buff, uint32_t len);
+typedef void (*MidiSendComplete_Callback)(uint8_t const port);
 
 /* USB MIDI functions */
 void USB_MIDI_Init(uint8_t const port);

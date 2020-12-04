@@ -42,6 +42,10 @@ static DQH_T ep_QH_1[EP_NUM_MAX] __attribute__((aligned(2048)));
 static DTD_T ep_TD_0[EP_NUM_MAX] __attribute__((aligned(64)));
 static DTD_T ep_TD_1[EP_NUM_MAX] __attribute__((aligned(64)));
 
+static void USB_DummyEPHandler(uint8_t const port, uint32_t const event)
+{
+}
+
 //#pragma pack(push, 4)
 typedef struct
 {
@@ -78,12 +82,18 @@ typedef struct
 } usb_core_t;
 
 static usb_core_t usb[2] = {
-  { .hardware = ((LPC_USB0_Type *) LPC_USB0_BASE),
-    .ep_QH    = &ep_QH_0[0],
-    .ep_TD    = &ep_TD_0[0] },
-  { .hardware = ((LPC_USB0_Type *) LPC_USB1_BASE),
-    .ep_QH    = &ep_QH_1[0],
-    .ep_TD    = &ep_TD_1[0] },
+  {
+      .hardware     = ((LPC_USB0_Type *) LPC_USB0_BASE),
+      .ep_QH        = &ep_QH_0[0],
+      .ep_TD        = &ep_TD_0[0],
+      .P_EPCallback = { USB_DummyEPHandler, USB_DummyEPHandler, USB_DummyEPHandler },
+  },
+  {
+      .hardware     = ((LPC_USB0_Type *) LPC_USB1_BASE),
+      .ep_QH        = &ep_QH_1[0],
+      .ep_TD        = &ep_TD_1[0],
+      .P_EPCallback = { USB_DummyEPHandler, USB_DummyEPHandler, USB_DummyEPHandler },
+  },
 };
 //#pragma pack(pop)
 
@@ -1397,7 +1407,7 @@ static inline void Handler(uint8_t const port)
       /* EP 0 - IN */
       if (val & (1 << 16))
       {
-        usb[port].ep_TD[1].total_bytes &= 0xC0;
+        usb[port].ep_TD[1].total_bytes &= 0xC0;  // clear byte count
         usb[port].hardware->ENDPTCOMPLETE = (1 << 16);
         usb[port].P_EPCallback[0](port, USB_EVT_IN);
       }
@@ -1410,14 +1420,14 @@ static inline void Handler(uint8_t const port)
       /* EP 1 - IN */
       if (val & (1 << 17))
       {
-        usb[port].ep_TD[3].total_bytes &= 0xC0;
+        usb[port].ep_TD[3].total_bytes &= 0xC0;  // clear byte count
         usb[port].hardware->ENDPTCOMPLETE = (1 << 17);
         usb[port].P_EPCallback[1](port, USB_EVT_IN);
       }
       /* EP 2 - IN */
       if (val & (1 << 18))
       {
-        usb[port].ep_TD[5].total_bytes &= 0xC0;
+        usb[port].ep_TD[5].total_bytes &= 0xC0;  // clear byte count
         usb[port].hardware->ENDPTCOMPLETE = (1 << 18);
         usb[port].P_EPCallback[2](port, USB_EVT_IN);
       }
@@ -1596,14 +1606,11 @@ uint32_t USB_ReadReqEP(uint8_t const port, uint32_t EPNum, uint8_t *pData, uint3
     @param[in]	ep		Endpoint number and direction
     					7	Direction (0 - out; 1-in)
     					3:0	Endpoint number
-    @return		when >= 0 number of bytes left to be sent, -1 after a (re-)connect
+    @return		        number of bytes left to be sent
 *******************************************************************************/
-int32_t USB_Core_BytesToSend(uint8_t const port, uint32_t endbuff, uint32_t ep)
+int32_t USB_Core_BytesToSend(uint8_t const port, uint32_t ep)
 {
-  uint32_t x = usb[port].ep_QH[EPAdr(ep)].buffer0;
-  if (x == 0)  // seems to fix the "USB reconnect traffic jam"
-    return -1;
-  return ((endbuff - x) & 0xFFF);
+  return usb[port].ep_TD[EPAdr(ep)].total_bytes >> 16;
 }
 
 void USB_Core_Device_Descriptor_Set(uint8_t const port, const uint8_t *ddesc)

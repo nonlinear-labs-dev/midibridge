@@ -20,32 +20,22 @@ static inline int memcmp(uint8_t const* const p, uint8_t const* const q, uint32_
 }
 static void showIspStart(void)
 {
-  LED_SetState(A, COLOR_BLUE, 0, 1);
-  LED_SetState(B, COLOR_BLUE, 0, 1);
 }
 
 static void showIspEnd(void)
 {
-  LED_SetState(A, COLOR_GREEN, 0, 1);
-  LED_SetState(B, COLOR_GREEN, 0, 1);
 }
 
 static void showIspFill(void)
 {
-  LED_SetState(A, COLOR_ORANGE, 0, 1);
-  LED_SetState(B, COLOR_ORANGE, 0, 1);
 }
 
 static void showIspExecute(void)
 {
-  LED_SetState(A, COLOR_RED, 0, 1);
-  LED_SetState(B, COLOR_RED, 0, 1);
 }
 
 static void showIspError(void)
 {
-  LED_SetState(A, COLOR_RED, 1, 1);
-  LED_SetState(B, COLOR_RED, 1, 1);
 }
 
 // return number of bytes of encoding
