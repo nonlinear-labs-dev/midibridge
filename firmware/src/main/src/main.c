@@ -15,6 +15,7 @@
 #include "drv/nl_cgu.h"
 #include "io/pins.h"
 #include "midi/MIDI_relay.h"
+#include "midi/MIDI_statemonitor.h"
 #include "sys/nl_version.h"
 #include "sys/ticker.h"
 
@@ -53,20 +54,12 @@ void Init(void)
   /* I/O pins */
   PINS_Init();
 
-  /* LEDs */
-  LED_Init();
-
   /* scheduler */
   COOS_Init();
 
   // clang-format off
   COOS_Task_Add(SYS_WatchDogClear,  0, 1);  // every 125 us
-  // COOS_Task_Add(LED_ProcessPWM,    1, 2);  // every 250 us  // PWM-LEDs
-  COOS_Task_Add(MIDI_Relay_Process, 1, 2);  // every 250 us
-
-#define TS (10)                                            // 1.25 ms time slice
-  // COOS_Task_Add(MIDI_Relay_Process, 1 * TS + 2, 40 * TS);  // every 50 ms
-  COOS_Task_Add(LED_Process,        2 * TS + 3, 20 * TS);  // every 25 ms
+  COOS_Task_Add(SMON_Process,       1, 1);  // every 125 us  // State Monitor LEDs
   // clang-format on
 
   /* M4 sysTick */

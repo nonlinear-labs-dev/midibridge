@@ -5,8 +5,9 @@
 #pragma once
 
 #include <stdint.h>
+#include "io/pins.h"
 
-enum BASE_COLORS
+typedef enum
 {
   COLOR_OFF     = 0b000,
   COLOR_RED     = 0b001,
@@ -16,13 +17,29 @@ enum BASE_COLORS
   COLOR_CYAN    = 0b110,
   COLOR_MAGENTA = 0b101,
   COLOR_WHITE   = 0b111,
-};
+} LedColor_t;
 
-void LED_SetDirect(uint8_t const ledId, uint8_t const rgb);
-void LED_SetDirectAndHalt(uint8_t const rgb);
-void LED_SetState(uint8_t const ledId, uint8_t const baseColor, uint8_t const bright, uint8_t const flickering);
-void LED_GetState(uint8_t const ledId, uint8_t* const baseColor, uint8_t* const bright, uint8_t* const flickering);
-void LED_SetColor(uint8_t const ledId, uint8_t const color);
-void LED_Process(void);
-void LED_ProcessPWM(void);
-void LED_Init(void);
+static inline void LED_SetDirect(uint8_t const ledId, LedColor_t const rgb)
+{
+  if (ledId)
+  {
+    LED_RED1   = !(rgb & 0b001);
+    LED_GREEN1 = !(rgb & 0b010);
+    LED_BLUE1  = !(rgb & 0b100);
+  }
+  else
+  {
+    LED_RED0   = !(rgb & 0b001);
+    LED_GREEN0 = !(rgb & 0b010);
+    LED_BLUE0  = !(rgb & 0b100);
+  }
+}
+
+static inline void LED_SetDirectAndHalt(uint8_t const rgb)
+{
+  LED_SetDirect(0, rgb);
+  LED_SetDirect(1, rgb);
+  __disable_irq();
+  while (1)
+    ;
+}

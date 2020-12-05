@@ -7,29 +7,29 @@
 
 //
 // --------------- LEDs ----------------
-//
+
 // System RGB-LEDs (those are active-low!)
 #define LED_A_init() GPIO_DIR_OUT(0, 15); SFSP(1, 20) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0
-#define LED_A          pGPIO_Word(0, 15)
+#define LED_A           GPIO_Word(0, 15)
 #define LED_B_init() GPIO_DIR_OUT(0, 12); SFSP(1, 17) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0
-#define LED_B          pGPIO_Word(0, 12)
+#define LED_B           GPIO_Word(0, 12)
 #define LED_C_init() GPIO_DIR_OUT(0,  2); SFSP(1, 15) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0
-#define LED_C          pGPIO_Word(0,  2)
+#define LED_C           GPIO_Word(0,  2)
 
 #define LED_D_init() GPIO_DIR_OUT(2, 13); SFSP(5,  4) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0
-#define LED_D          pGPIO_Word(2, 13)
+#define LED_D           GPIO_Word(2, 13)
 #define LED_E_init() GPIO_DIR_OUT(1,  3); SFSP(1, 10) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0
-#define LED_E          pGPIO_Word(1,  3)
+#define LED_E           GPIO_Word(1,  3)
 #define LED_F_init() GPIO_DIR_OUT(1,  9); SFSP(1, 6) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0
-#define LED_F          pGPIO_Word(1,  9)
+#define LED_F           GPIO_Word(1,  9)
 
 // LED assignments :
-#define pLED_RED0	 LED_A
-#define pLED_GREEN0  LED_B
-#define pLED_BLUE0   LED_C
-#define pLED_RED1	 LED_D
-#define pLED_GREEN1  LED_E
-#define pLED_BLUE1   LED_F
+#define LED_RED0	 LED_A
+#define LED_GREEN0  LED_B
+#define LED_BLUE0   LED_C
+#define LED_RED1	 LED_D
+#define LED_GREEN1  LED_E
+#define LED_BLUE1   LED_F
 
 //
 // Debug-LEDs (those are active-high)
@@ -49,12 +49,12 @@ static inline void debugPinsInit(void)
   LED_D_init();
   LED_E_init();
   LED_F_init();
-  *LED_A = 0;
-  *LED_B = 0;
-  *LED_C = 0;
-  *LED_D = 0;
-  *LED_E = 0;
-  *LED_F = 0;
+  LED_A = 0;
+  LED_B = 0;
+  LED_C = 0;
+  LED_D = 0;
+  LED_E = 0;
+  LED_F = 0;
 
   LED_DBG1_init();
   LED_DBG2_init();
