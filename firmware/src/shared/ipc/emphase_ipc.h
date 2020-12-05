@@ -7,7 +7,6 @@
 #pragma once
 
 #include <stdint.h>
-#include "sys/globals.h"
 
 typedef struct
 {

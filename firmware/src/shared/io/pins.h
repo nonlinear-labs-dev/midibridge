@@ -1,7 +1,6 @@
 #pragma once
 
 #include "pin_setup.h"
-#include "sys/globals.h"
 
 // clang-format off
 

@@ -454,63 +454,61 @@ void ResetISR(void)
   }
 }
 
+static inline void faultDisplay(void)
+{
+  LED_A    = 0;
+  LED_B    = 0;
+  LED_C    = 0;
+  LED_D    = 0;
+  LED_E    = 0;
+  LED_F    = 0;
+  LED_DBG1 = 1;
+  LED_DBG2 = 1;
+  LED_DBG3 = 1;
+  __disable_irq();
+  while (1)
+  {
+  }
+}
+
 //*****************************************************************************
 // Default exception handlers. Override the ones here by defining your own
 // handler routines in your application code.
 //*****************************************************************************
 __attribute__((section(".after_vectors"))) void NMI_Handler(void)
 {
-  while (1)
-  {
-  }
+  faultDisplay();
 }
 __attribute__((section(".after_vectors"))) void HardFault_Handler(void)
 {
-  while (1)
-  {
-  }
+  faultDisplay;
 }
 __attribute__((section(".after_vectors"))) void MemManage_Handler(void)
 {
-  while (1)
-  {
-  }
+  faultDisplay();
 }
 __attribute__((section(".after_vectors"))) void BusFault_Handler(void)
 {
-  while (1)
-  {
-  }
+  faultDisplay();
 }
 __attribute__((section(".after_vectors"))) void UsageFault_Handler(void)
 {
-  while (1)
-  {
-  }
+  faultDisplay();
 }
 __attribute__((section(".after_vectors"))) void SVC_Handler(void)
 {
-  while (1)
-  {
-  }
+  faultDisplay();
 }
 __attribute__((section(".after_vectors"))) void DebugMon_Handler(void)
 {
-  while (1)
-  {
-  }
+  faultDisplay();
 }
 __attribute__((section(".after_vectors"))) void PendSV_Handler(void)
 {
-  while (1)
-  {
-  }
+  faultDisplay();
 }
 __attribute__((section(".after_vectors"))) void SysTick_Handler(void)
 {
-  while (1)
-  {
-  }
 }
 
 //*****************************************************************************
@@ -521,7 +519,5 @@ __attribute__((section(".after_vectors"))) void SysTick_Handler(void)
 //*****************************************************************************
 __attribute__((section(".after_vectors"))) void IntDefaultHandler(void)
 {
-  while (1)
-  {
-  }
+  faultDisplay();
 }

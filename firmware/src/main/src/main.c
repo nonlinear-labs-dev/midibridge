@@ -8,7 +8,6 @@
 
 #include <stdint.h>
 
-#include "sys/nl_coos.h"
 #include "sys/nl_watchdog.h"
 #include "CPU_clock.h"
 #include "drv/nl_leds.h"
@@ -19,11 +18,7 @@
 #include "sys/nl_version.h"
 #include "sys/ticker.h"
 
-#define DBG_CLOCK_MONITOR (0)
-
 #define WATCHDOG_TIMEOUT_MS (100ul)  // timeout in ms
-
-static volatile uint16_t waitForFirstSysTick = 1;
 
 void M4SysTick_Init(void);
 
@@ -54,14 +49,6 @@ void Init(void)
   /* I/O pins */
   PINS_Init();
 
-  /* scheduler */
-  COOS_Init();
-
-  // clang-format off
-  COOS_Task_Add(SYS_WatchDogClear,  0, 1);  // every 125 us
-  COOS_Task_Add(SMON_Process,       1, 1);  // every 125 us  // State Monitor LEDs
-  // clang-format on
-
   /* M4 sysTick */
   M4SysTick_Init();
 
@@ -71,6 +58,10 @@ void Init(void)
 }
 
 /******************************************************************************/
+
+static int periodicTimer = TIME_SLICE;
+static int trigger       = 0;
+
 void main(void)
 {
   Init();
@@ -81,9 +72,11 @@ void main(void)
   while (1)
   {
     MIDI_Relay_ProcessFast();
-    // USB_MIDI_Poll(0);  // Send/receive MIDI data, may do callbacks
-    // USB_MIDI_Poll(1);  // Send/receive MIDI data, may do callbacks
-    COOS_Dispatch();  // Standard dispatching of the slower stuff
+    if (trigger)
+    {
+      trigger = 0;
+      SMON_Process();
+    }
   }
 }
 
@@ -105,5 +98,9 @@ void M4SysTick_Init(void)
 void SysTick_Handler(void)
 {
   ticker++;
-  COOS_Update();
+  if (!--periodicTimer)
+  {
+    periodicTimer = TIME_SLICE;
+    trigger       = 1;
+  }
 }

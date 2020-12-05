@@ -14,6 +14,13 @@
 #include "sys/nl_stdlib.h"
 #include "io/pins.h"
 
+//#define CHECK_SIZES_AT_COMPILE_TIME
+#ifdef CHECK_SIZES_AT_COMPILE_TIME
+#define checkSize(x) char(*x##_check)[sizeof(x)] = 1
+#else
+#define checkSize(x)
+#endif
+
 static uint32_t EPAdr(uint32_t const EPNum);
 static void     SetAddress(uint8_t const port, uint32_t const adr);
 static void     Reset(uint8_t const port);
@@ -38,15 +45,15 @@ static void     Handler(uint8_t const port);
 static void     ClearDTD(uint8_t const port, uint32_t Edpt);
 
 static DQH_T ep_QH_0[EP_NUM_MAX] __attribute__((aligned(2048)));
-static DQH_T ep_QH_1[EP_NUM_MAX] __attribute__((aligned(2048)));
 static DTD_T ep_TD_0[EP_NUM_MAX] __attribute__((aligned(64)));
+
+static DQH_T ep_QH_1[EP_NUM_MAX] __attribute__((aligned(2048)));
 static DTD_T ep_TD_1[EP_NUM_MAX] __attribute__((aligned(64)));
 
 static void USB_DummyEPHandler(uint8_t const port, uint32_t const event)
 {
 }
 
-//#pragma pack(push, 4)
 typedef struct
 {
   LPC_USB0_Type *       hardware;
@@ -95,7 +102,12 @@ static usb_core_t usb[2] = {
       .P_EPCallback = { USB_DummyEPHandler, USB_DummyEPHandler, USB_DummyEPHandler },
   },
 };
-//#pragma pack(pop)
+
+#ifdef CHECK_SIZES_AT_COMPILE_TIME
+checkSize(usb);
+checkSize(ep_QH_0);
+checkSize(ep_TD_0);
+#endif
 
 /******************************************************************************/
 /** @brief		Translates the logical endpoint address to physical

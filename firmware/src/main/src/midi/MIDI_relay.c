@@ -20,12 +20,12 @@ struct PacketTransfer;
 
 struct PacketTransfer
 {
-  uint8_t                portNo;
-  uint8_t                outgoingPortNo;
-  struct PacketTransfer *outgoingTransfer;
-  int                    powered;
-  int                    online;
-  int                    first;
+  uint8_t const                portNo;
+  uint8_t const                outgoingPortNo;
+  struct PacketTransfer *const outgoingTransfer;
+  int                          powered;
+  int                          online;
+  int                          first;
 
   PacketState_t state;
   uint8_t *     pData;

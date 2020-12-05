@@ -10,7 +10,6 @@
 
 #include "usb/nl_usbd.h"
 #include "usb/nl_usb_core.h"
-#include "sys/globals.h"
 #include "usb/nl_usb_descmidi.h"
 
 /* USB Standard Device Descriptor */

@@ -9,7 +9,6 @@
 #include "usb/nl_usb_midi.h"
 #include "usb/nl_usb_descmidi.h"
 #include "usb/nl_usb_core.h"
-#include "sys/globals.h"
 #include "sys/nl_stdlib.h"
 #include "io/pins.h"
 

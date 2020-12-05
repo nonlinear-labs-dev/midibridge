@@ -4,21 +4,22 @@
 #define usToTicks(x) (1 + (x) / 125ul)            // usecs to 125 ticker counts
 #define msToTicks(x) (1 + ((x) *1000ul) / 125ul)  // msecs to 125 ticker counts
 
-#define LATE_TIME                  msToTicks(2ul)     // time until packet is marked as LATE
-#define STALE_TIME                 msToTicks(20ul)    // time until packet is marked as STALE
-#define REALTIME_INDICATOR_TIMEOUT msToTicks(30ul)    // minimum display duration of  any real-time packets
-#define LATE_INDICATOR_TIMEOUT     msToTicks(2000ul)  // display time of any late packets
-#define STALE_INDICATOR_TIMEOUT    msToTicks(6000ul)  // display time of any stale packets
-#define DROPPED_INDICATOR_TIMEOUT  msToTicks(200ul)   // display time of any dropped incoming packets
+#define LATE_TIME                  usToTicks(1000ul)  // time until packet is considered LATE
+#define STALE_TIME                 msToTicks(20ul)    // time until packet is considered STALE
+#define REALTIME_INDICATOR_TIMEOUT msToTicks(20ul)    // minimum hot display duration after end of real-time packets
+#define DROPPED_INDICATOR_TIMEOUT  msToTicks(200ul)   // hot display time of any dropped incoming packets
+#define LATE_INDICATOR_TIMEOUT     msToTicks(2000ul)  // display time of "had late packets recently"
+#define STALE_INDICATOR_TIMEOUT    msToTicks(6000ul)  // display time of "had stale packets recently"
 #define BLINK_TIME                 msToTicks(3000ul)  // blink cycle time for offline status display
 #define BLINK_TIME_ON_TIME         msToTicks(300ul)   // active portion of blink time
 #define BLINK_TIME_OFF_TIME        (BLINK_TIME - BLINK_TIME_ON_TIME)
 
-#define PWM_RELOAD (30)  // PWM ratio for dimmed LED
+#define PWM_RELOAD (32)  // PWM ratio for dimmed LED
 
 typedef enum
 {
   DIM = 0,
+  NORMAL,
   BRIGHT,
 } Brightness_t;
 
@@ -68,7 +69,6 @@ static inline void doTimers(void);
 // may be called from within interrupt callbacks !
 void SMON_monitorEvent(uint8_t const port, MonitorEvent_t const event)
 {
-  asm(".ltorg");  // fixes the "offset out of range error when using link time optimization
   switch (event)
   {
     case UNPOWERED:
@@ -196,13 +196,13 @@ static inline void setupDisplay(uint8_t const port)
         switch (state[port].packetLatency)
         {
           case REALTIME:
-            setLED(port, COLOR_GREEN, BRIGHT, SOLID);
+            setLED(port, COLOR_GREEN, NORMAL, SOLID);
             break;
           case LATE:
-            setLED(port, COLOR_YELLOW, BRIGHT, SOLID);
+            setLED(port, COLOR_YELLOW, NORMAL, SOLID);
             break;
           case STALE:
-            setLED(port, COLOR_RED, BRIGHT, SOLID);
+            setLED(port, COLOR_RED, NORMAL, SOLID);
             break;
         }
       }
@@ -228,9 +228,20 @@ static inline void setupDisplay(uint8_t const port)
 
 static inline void doDisplay(uint8_t const port)
 {
-  int output = (pwmCntr == PWM_RELOAD);
-  if (led[port].bright)
-    output = 1;
+  int output = 0;
+  switch (led[port].bright)
+  {
+    case DIM:
+      output = (pwmCntr == PWM_RELOAD);
+      break;
+    case NORMAL:
+      output = ((pwmCntr & 0b11) == 0);
+      break;
+    case BRIGHT:
+      output = 1;
+      break;
+  }
+
   if (led[port].blink && (blinkCntr < BLINK_TIME_OFF_TIME))
     output = 0;
   if (output)
