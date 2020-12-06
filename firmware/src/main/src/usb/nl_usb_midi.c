@@ -15,8 +15,7 @@
 typedef struct
 {
   MidiReceiveComplete_Callback ReceiveCallback;
-  uint8_t                      suspendReceive;
-  uint8_t                      dropMessages;
+  int                          suspendReceive;
 } UsbMidi_t;
 
 static UsbMidi_t usbMidi[2];
@@ -44,13 +43,19 @@ struct _rxBuffer
 /** @brief		Endpoint 1 Callback (Data read from Host)
     @param[in]	event	Event that triggered the interrupt
 *******************************************************************************/
+
+static inline void primeReceive(uint8_t const port)
+{
+  if (!usbMidi[port].suspendReceive)
+    USB_ReadReqEP(port, 0x01, rxBuffer[port].data, rxBuffer[port].size);
+}
+
 static void Handler_ReadFromHost(uint8_t const port, uint32_t const event)
 {
   switch (event)
   {
     case USB_EVT_OUT_NAK:  // host has data --> get a transfer running to collect it
-      if (!usbMidi[port].suspendReceive)
-        USB_ReadReqEP(port, 0x01, rxBuffer[port].data, rxBuffer[port].size);
+      primeReceive(port);
       break;
 
     case USB_EVT_OUT:  // transfer finished successfully --> hand data over to application
@@ -59,8 +64,7 @@ static void Handler_ReadFromHost(uint8_t const port, uint32_t const event)
       if (usbMidi[port].ReceiveCallback)
         usbMidi[port].ReceiveCallback(port, rxBuffer[port].data, length);
       // prepare the next potential transfer right now to avoid extra NAK phase later
-      if (!usbMidi[port].suspendReceive)
-        USB_ReadReqEP(port, 0x01, rxBuffer[port].data, rxBuffer[port].size);
+      primeReceive(port);
       break;
     }
   }
@@ -127,10 +131,6 @@ uint32_t USB_MIDI_IsConfigured(uint8_t const port)
 *******************************************************************************/
 int32_t USB_MIDI_Send(uint8_t const port, uint8_t const *const buff, uint32_t const cnt)
 {
-
-  if (usbMidi[port].dropMessages)
-    return 0;
-
   if (USB_Core_ReadyToWrite(port, 0x82))
   {
     if (cnt)
@@ -151,7 +151,7 @@ int32_t USB_MIDI_BytesToSend(uint8_t const port)
 
 /******************************************************************************/
 /** @brief		Suspend further receives
-    @param[in]	suspend	!= 0--> suspend, == 0, normal
+    @param[in]	suspend	!= 0 --> suspended, == 0 --> normal
 *******************************************************************************/
 void USB_MIDI_SuspendReceive(uint8_t const port, uint8_t const suspend)
 {
