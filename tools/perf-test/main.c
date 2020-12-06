@@ -204,8 +204,15 @@ static inline void doSend(void)
     unsigned expo = ((unsigned) rand()) % 11;  // 0..10
     unsigned size = 1 << expo;                 // 2^0...2^10(1024)
     size += ((unsigned) rand()) & (size - 1);  // 0..2047
+    if (size & 1)
+      size++;
     size += 24;
     ((uint64_t *) dataBuf)[2] = size;
+
+    uint16_t *p   = (uint16_t *) &(dataBuf[24]);
+    uint16_t  val = messageNo & 0xFFFF;
+    for (int i = 0; i < (size - 24) / 2; i++)
+      *p++ = val++;
 
     cursorUp(1);
     printf("n:%lu, s:%5u\n", messageNo++, size);
@@ -249,8 +256,8 @@ static inline void doSend(void)
 
       total += written;
       time = getTimeUSec() - time;
-      // printf("sleeping %lu usecs.\n", time);
       time *= 1 + (((unsigned) rand()) & 0xF);  // * 1..16
+      //time /= 3;
       if (time > 1000ul * 1000ul)
         time = 1000ul * 1000ul;
 
@@ -302,7 +309,7 @@ uint64_t packetCntr;
 
 static inline BOOL examineContent(void const *const data, int const len)
 {
-  if (len < 16)
+  if (len < 24)
   {
     error("receive: payload has wrong minimum length %d, expected %d", len, 16);
     return FALSE;
@@ -311,6 +318,12 @@ static inline BOOL examineContent(void const *const data, int const len)
   uint64_t const packetTime   = ((uint64_t *) data)[0];
   uint64_t const packetNumber = ((uint64_t *) data)[1];
   uint64_t const packetSize   = ((uint64_t *) data)[2];
+
+  if (packetSize != len)
+  {
+    error("receive: packet has wrong length %lu, expected %lu", len, packetSize);
+    return FALSE;
+  }
 
   if (packetCntr++ != 0)
   {
@@ -322,15 +335,20 @@ static inline BOOL examineContent(void const *const data, int const len)
   }
   packetCntr = packetNumber;
 
-  if (packetSize != len)
-  {
-    error("receive: packet has wrong length %lu, expected %lu", len, packetSize);
-    return FALSE;
-  }
-
   cursorUp(1);
   printf("n:%lu, s:%5lu\n", packetNumber, packetSize);
   fflush(stdout);
+
+  uint16_t *p   = (uint16_t *) &(data[24]);
+  uint16_t  val = packetNumber & 0xFFFF;
+  for (int i = 0; i < (packetSize - 24) / 2; i++)
+  {
+    if (*p++ != val++)
+    {
+      error("receive: packet is corrupted");
+      return FALSE;
+    }
+  }
 
   uint64_t const now  = getTimeUSec();
   uint64_t       time = now - packetTime;
