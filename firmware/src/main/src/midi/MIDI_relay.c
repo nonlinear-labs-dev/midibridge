@@ -1,4 +1,6 @@
+#include "midi/MIDI_relay.h"
 #include "usb/nl_usb_midi.h"
+#include "usb/nl_usb_core.h"
 #include "io/pins.h"
 #include "drv/nl_leds.h"
 #include "sys/nl_stdlib.h"
@@ -50,6 +52,8 @@ static inline void packetTransferReset(OP)
 {
   t->state = IDLE;
   USB_MIDI_SuspendReceive(t->portNo, 0);  // keep receiver enabled
+  USB_MIDI_ClearReceive(t->portNo);
+
   t->pData         = NULL;
   t->len           = 0;
   t->dropped       = 0;
@@ -90,6 +94,7 @@ static inline void processTransfers(OP)
         break;  // still sending...
       t->state = IDLE;
       USB_MIDI_SuspendReceive(t->portNo, 0);  // re-enable receiver
+      USB_MIDI_primeReceive(t->portNo);
       SMON_monitorEvent(t->portNo, PACKET_DELIVERED);
       break;
   }
@@ -102,6 +107,7 @@ static inline void processTransfers(OP)
       USB_MIDI_KillTransmit(t->outgoingPortNo);
       t->state = IDLE;
       USB_MIDI_SuspendReceive(t->portNo, 0);  // re-enable receiver
+      USB_MIDI_primeReceive(t->portNo);
       SMON_monitorEvent(t->portNo, PACKET_DROPPED);
       return;
     }
@@ -110,6 +116,15 @@ static inline void processTransfers(OP)
 
 static inline void checkPortStatus(OP)
 {
+  if (USB_GetError(t->portNo))
+  {
+    __disable_irq();
+    USB_MIDI_DeInit(t->portNo);
+    USB_MIDI_DeInit(t->outgoingPortNo);
+    MIDI_Relay_Init();
+    __enable_irq();
+    return;
+  }
   uint32_t online  = USB_MIDI_IsConfigured(t->portNo);
   int      powered = (t->portNo == 0) ? pinUSB0_VBUS : pinUSB1_VBUS;
 
@@ -124,7 +139,11 @@ static inline void checkPortStatus(OP)
   {
     t->online = online;
     if (online)
+    {
+      USB_MIDI_SuspendReceive(t->portNo, 0);
+      USB_MIDI_primeReceive(t->portNo);
       SMON_monitorEvent(t->portNo, ONLINE);
+    }
     else
     {
       packetTransferReset(t);

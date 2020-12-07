@@ -11,6 +11,7 @@
 #define LATE_INDICATOR_TIMEOUT     msToTicks(2000ul)  // display time of "had late packets recently"
 #define STALE_INDICATOR_TIMEOUT    msToTicks(6000ul)  // display time of "had stale packets recently"
 #define BLINK_TIME                 msToTicks(3000ul)  // blink cycle time for offline status display
+#define BLINK_TIME_FIRST           msToTicks(4000ul)  // blink cycle time for offline status display
 #define BLINK_TIME_ON_TIME         msToTicks(300ul)   // active portion of blink time
 #define BLINK_TIME_OFF_TIME        (BLINK_TIME - BLINK_TIME_ON_TIME)
 
@@ -74,12 +75,12 @@ void SMON_monitorEvent(uint8_t const port, MonitorEvent_t const event)
     case UNPOWERED:
     case POWERED:
       state[port].powered = (event == POWERED);
-      blinkCntr           = BLINK_TIME;  // force blinker to restart with LED on
+      blinkCntr           = BLINK_TIME_FIRST;  // force blinker to restart with LED on
       break;
 
     case OFFLINE:
       state[port].online = 0;
-      blinkCntr          = BLINK_TIME;  // force blinker to restart with LED on
+      blinkCntr          = BLINK_TIME_FIRST;  // force blinker to restart with LED on
       break;
 
     case ONLINE:

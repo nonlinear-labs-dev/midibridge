@@ -21,6 +21,8 @@ void USB_MIDI_Config(uint8_t const port, MidiReceiveComplete_Callback midircv);
 
 uint32_t USB_MIDI_IsConfigured(uint8_t const port);
 void     USB_MIDI_SuspendReceive(uint8_t const port, uint8_t const suspend);
+void     USB_MIDI_primeReceive(uint8_t const port);
+void     USB_MIDI_ClearReceive(uint8_t const port);
 int32_t  USB_MIDI_Send(uint8_t const port, uint8_t const* const buff, uint32_t const cnt);
 int32_t  USB_MIDI_BytesToSend(uint8_t const port);
 void     USB_MIDI_KillTransmit(uint8_t const port);

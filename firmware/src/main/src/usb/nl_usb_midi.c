@@ -11,11 +11,13 @@
 #include "usb/nl_usb_core.h"
 #include "sys/nl_stdlib.h"
 #include "io/pins.h"
+#include "drv/nl_leds.h"
 
 typedef struct
 {
   MidiReceiveComplete_Callback ReceiveCallback;
   int                          suspendReceive;
+  int                          primed;
 } UsbMidi_t;
 
 static UsbMidi_t usbMidi[2];
@@ -47,7 +49,20 @@ struct _rxBuffer
 static inline void primeReceive(uint8_t const port)
 {
   if (!usbMidi[port].suspendReceive)
-    USB_ReadReqEP(port, 0x01, rxBuffer[port].data, rxBuffer[port].size);
+  {
+    if (!usbMidi[port].primed)
+    {
+      USB_ReadReqEP(port, 0x01, rxBuffer[port].data, rxBuffer[port].size);
+      usbMidi[port].primed = 1;
+    }
+  }
+}
+
+void USB_MIDI_primeReceive(uint8_t const port)
+{
+  __disable_irq();
+  primeReceive(port);
+  __enable_irq();
 }
 
 static void Handler_ReadFromHost(uint8_t const port, uint32_t const event)
@@ -62,7 +77,10 @@ static void Handler_ReadFromHost(uint8_t const port, uint32_t const event)
     {
       uint32_t length = USB_ReadEP(port, 0x01);
       if (usbMidi[port].ReceiveCallback)
+      {
         usbMidi[port].ReceiveCallback(port, rxBuffer[port].data, length);
+        usbMidi[port].primed = 0;
+      }
       // prepare the next potential transfer right now to avoid extra NAK phase later
       primeReceive(port);
       break;
@@ -85,6 +103,8 @@ static void EndPoint1_ReadFromHost_1(uint8_t const port, uint32_t const event)
 *******************************************************************************/
 void USB_MIDI_Init(uint8_t const port)
 {
+  usbMidi[port].suspendReceive = 0;
+  usbMidi[port].primed         = 0;
   /** assign descriptors */
   USB_Core_Device_Descriptor_Set(port, (const uint8_t *) USB_MIDI_DeviceDescriptor);
   USB_Core_Device_FS_Descriptor_Set(port, (const uint8_t *) USB_MIDI_FSConfigDescriptor);
@@ -99,6 +119,7 @@ void USB_MIDI_Init(uint8_t const port)
 void USB_MIDI_DeInit(uint8_t const port)
 {
   usbMidi[port].suspendReceive = 0;
+  usbMidi[port].primed         = 0;
   USB_Core_DeInit(port);
   USB_Core_DeInit(port);
 }
@@ -164,6 +185,11 @@ void USB_MIDI_SuspendReceive(uint8_t const port, uint8_t const suspend)
 void USB_MIDI_KillTransmit(uint8_t const port)
 {
   USB_ResetEP(port, 0x82);
+}
+
+void USB_MIDI_ClearReceive(uint8_t const port)
+{
+  usbMidi[port].primed = 0;
 }
 
 // EOF

@@ -102,16 +102,25 @@ typedef volatile struct
  */
 /** USB Interrupt */
 #define USBSTS_UI (1 << 0)
+
 /** USB Error Interrupt */
 #define USBSTS_UEI (1 << 1)
+
 /** Port change detect */
 #define USBSTS_PCI (1 << 2)
+
+/** USB System Error Interrupt */
+#define USBSTS_SEI (1 << 4)
+
 /** USB Reset received */
 #define USBSTS_URI (1 << 6)
+
 /** Start-of-Frame received */
 #define USBSTS_SRI (1 << 7)
+
 /** Device Controller Suspended */
 #define USBSTS_SLI (1 << 8)
+
 /** NAK Interrupt */
 #define USBSTS_NAKI (1 << 16)
 /** @} */
@@ -211,6 +220,7 @@ typedef volatile struct
 
 void     USB_Core_Init(uint8_t const port);
 uint8_t  USB_GetActivity(uint8_t const port);
+uint8_t  USB_GetError(uint8_t const port);
 uint8_t  USB_SetupComplete(uint8_t const port);
 void     USB_Core_DeInit(uint8_t const port);
 void     USB_Core_ForceFullSpeed(uint8_t const port);

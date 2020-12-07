@@ -84,6 +84,7 @@ typedef struct
   uint8_t const *       FSOtherSpeedConfiguration;
   uint8_t const *       HSOtherSpeedConfiguration;
   uint8_t               activity;
+  uint8_t               error;
   uint8_t               gotConfigDescriptorRequest;
   uint8_t               connectionEstablished;
 } usb_core_t;
@@ -188,6 +189,7 @@ static void Reset(uint8_t const port)
   /* Enable interrupts */
   usb[port].hardware->USBINTR_D = USBSTS_UI
       | USBSTS_UEI
+      | USBSTS_SEI
       | USBSTS_PCI
       | USBSTS_URI
       | USBSTS_SRI /* Start-of-Frame */
@@ -256,6 +258,7 @@ static uint32_t ReadSetupPkt(uint8_t const port, uint32_t const EPNum, uint32_t 
 void USB_Core_Init(uint8_t const port)
 {
   usb[port].P_EPCallback[0] = EndPoint0;
+  usb[port].error           = 0;
 
   /* Turn on the phy */
   if (port == 0)
@@ -312,6 +315,13 @@ uint8_t USB_GetActivity(uint8_t const port)
 {
   uint8_t ret        = usb[port].activity;
   usb[port].activity = 0;
+  return ret;
+}
+
+uint8_t USB_GetError(uint8_t const port)
+{
+  uint8_t ret     = usb[port].error;
+  usb[port].error = 0;
   return ret;
 }
 
@@ -1375,6 +1385,14 @@ static void EndPoint0(uint8_t const port, uint32_t const event)
   }
 }
 
+static inline void SetError(uint8_t const port)
+{
+  usb[port].error = 1;
+}
+
+#define STATUS_BITS (0xC0)
+#define CLEAR_MASK  (0x7FFF00C0)
+
 static inline void Handler(uint8_t const port)
 {
   uint32_t disr, val, n;
@@ -1414,12 +1432,16 @@ static inline void Handler(uint8_t const port)
       if (val & 1)
       {
         usb[port].hardware->ENDPTCOMPLETE = 1;
+        if (usb[port].ep_TD[0].total_bytes & STATUS_BITS)
+          SetError(port);
         usb[port].P_EPCallback[0](port, USB_EVT_OUT);
       }
       /* EP 0 - IN */
       if (val & (1 << 16))
       {
-        usb[port].ep_TD[1].total_bytes &= 0xC0;  // clear byte count
+        usb[port].ep_TD[1].total_bytes &= CLEAR_MASK;  // isolate byte count
+        if (usb[port].ep_TD[1].total_bytes != 0)
+          SetError(port);
         usb[port].hardware->ENDPTCOMPLETE = (1 << 16);
         usb[port].P_EPCallback[0](port, USB_EVT_IN);
       }
@@ -1427,20 +1449,26 @@ static inline void Handler(uint8_t const port)
       if (val & 2)
       {
         usb[port].hardware->ENDPTCOMPLETE = 2;
+        if (usb[port].ep_TD[2].total_bytes & STATUS_BITS)
+          SetError(port);
         usb[port].P_EPCallback[1](port, USB_EVT_OUT);
       }
       /* EP 1 - IN */
       if (val & (1 << 17))
       {
-        usb[port].ep_TD[3].total_bytes &= 0xC0;  // clear byte count
+        usb[port].ep_TD[3].total_bytes &= CLEAR_MASK;  // isolate byte count
         usb[port].hardware->ENDPTCOMPLETE = (1 << 17);
+        if (usb[port].ep_TD[3].total_bytes != 0)
+          SetError(port);
         usb[port].P_EPCallback[1](port, USB_EVT_IN);
       }
       /* EP 2 - IN */
       if (val & (1 << 18))
       {
-        usb[port].ep_TD[5].total_bytes &= 0xC0;  // clear byte count
+        usb[port].ep_TD[5].total_bytes &= CLEAR_MASK;  // isolate byte count
         usb[port].hardware->ENDPTCOMPLETE = (1 << 18);
+        if (usb[port].ep_TD[5].total_bytes != 0)
+          SetError(port);
         usb[port].P_EPCallback[2](port, USB_EVT_IN);
       }
     }
@@ -1499,6 +1527,14 @@ static inline void Handler(uint8_t const port)
     if (disr & USBSTS_UEI)
     {
       usb[port].activity = 1;
+      SetError(port);
+    }
+
+    /* System Error Interrupt */
+    if (disr & USBSTS_SEI)
+    {
+      usb[port].activity = 1;
+      SetError(port);
     }
 
     if (usb[port].activity)
