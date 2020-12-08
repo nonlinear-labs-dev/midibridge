@@ -66,7 +66,7 @@
 								<option id="com.crt.advproject.link.gcc.multicore.master.userobjs.1153043235" name="Slave Objects (not visible)" superClass="com.crt.advproject.link.gcc.multicore.master.userobjs" valueType="userObjs"/>
 								<option id="com.crt.advproject.link.arch.1177867480" name="Architecture" superClass="com.crt.advproject.link.arch" value="com.crt.advproject.link.target.cm4" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.thumb.1887801752" name="Thumb mode" superClass="com.crt.advproject.link.thumb" value="true" valueType="boolean"/>
-								<option id="com.crt.advproject.link.script.1528650216" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;C15_LPC4337_main.ld&quot;" valueType="string"/>
+								<option id="com.crt.advproject.link.script.1528650216" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;main.ld&quot;" valueType="string"/>
 								<option id="com.crt.advproject.link.manage.128491229" name="Manage linker script" superClass="com.crt.advproject.link.manage" value="false" valueType="boolean"/>
 								<option id="gnu.c.link.option.nostdlibs.878761408" name="No startup or default libs (-nostdlib)" superClass="gnu.c.link.option.nostdlibs" value="true" valueType="boolean"/>
 								<option id="gnu.c.link.option.other.635225948" name="Other options (-Xlinker [option])" superClass="gnu.c.link.option.other" valueType="stringList">
@@ -159,7 +159,7 @@
 								<option id="com.crt.advproject.link.gcc.multicore.master.userobjs.105131270" name="Slave Objects (not visible)" superClass="com.crt.advproject.link.gcc.multicore.master.userobjs" valueType="userObjs"/>
 								<option id="com.crt.advproject.link.arch.540595748" name="Architecture" superClass="com.crt.advproject.link.arch" value="com.crt.advproject.link.target.cm4" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.thumb.688448334" name="Thumb mode" superClass="com.crt.advproject.link.thumb" value="true" valueType="boolean"/>
-								<option id="com.crt.advproject.link.script.824496378" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;C15_LPC4337_main.ld&quot;" valueType="string"/>
+								<option id="com.crt.advproject.link.script.824496378" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;main.ld&quot;" valueType="string"/>
 								<option id="com.crt.advproject.link.manage.557542724" name="Manage linker script" superClass="com.crt.advproject.link.manage" value="false" valueType="boolean"/>
 								<option id="gnu.c.link.option.nostdlibs.1888462163" name="No startup or default libs (-nostdlib)" superClass="gnu.c.link.option.nostdlibs" value="true" valueType="boolean"/>
 								<option id="gnu.c.link.option.other.720296235" name="Other options (-Xlinker [option])" superClass="gnu.c.link.option.other" valueType="stringList">

@@ -135,9 +135,9 @@
 			<locationURI>PARENT-1-PROJECT_LOC/shared/ipc/emphase_ipc.h</locationURI>
 		</link>
 		<link>
-			<name>src/shared/midi/nl_ispmarkers.h</name>
+			<name>src/shared/midi/nl_devctl_defs.h</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/shared/midi/nl_ispmarkers.h</locationURI>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/midi/nl_devctl_defs.h</locationURI>
 		</link>
 		<link>
 			<name>src/shared/midi/nl_sysex.c</name>
