@@ -10,7 +10,7 @@ SECTIONS
         *(.text*)
         *(.rodata .rodata.* .constdata .constdata.*)
         . = ALIGN(4);
-    } > RamLoc32
+    } > RamLoc40
         
     /* MAIN DATA SECTION */
     .uninit_RESERVED : ALIGN(4)
@@ -18,8 +18,8 @@ SECTIONS
         KEEP(*(.bss.$RESERVED*))
         . = ALIGN(4) ;
         _end_uninit_RESERVED = .;
-    } > RamLoc32
-    /* Main DATA section (RamLoc32) */
+    } > RamLoc40
+    /* Main DATA section (RamLoc40) */
     .data : ALIGN(4)
     {
        FILL(0xff)
@@ -29,7 +29,7 @@ SECTIONS
        *(.data*)
        . = ALIGN(4) ;
        _edata = . ;
-    } > RamLoc32
+    } > RamLoc40
 
     /* MAIN BSS SECTION */
     .bss : ALIGN(4)
@@ -40,7 +40,7 @@ SECTIONS
         . = ALIGN(4) ;
         _ebss = .;
         PROVIDE(end = .);
-    } > RamLoc32
+    } > RamLoc40
 
     /* DEFAULT NOINIT SECTION */
     .noinit (NOLOAD): ALIGN(4)
@@ -49,7 +49,7 @@ SECTIONS
         *(.noinit*) 
          . = ALIGN(4) ;
         _end_noinit = .;
-    } > RamLoc32
+    } > RamLoc40
 
     PROVIDE(_startOfAttachment = .);
 }

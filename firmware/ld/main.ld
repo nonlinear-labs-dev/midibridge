@@ -1,4 +1,4 @@
-INCLUDE "C15_LPC4337_main_MEM.ld"
+INCLUDE "main_MEM.ld"
 
 ENTRY(ResetISR)
 

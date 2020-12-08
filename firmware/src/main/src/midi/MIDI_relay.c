@@ -6,6 +6,7 @@
 #include "sys/nl_stdlib.h"
 #include "sys/ticker.h"
 #include "midi/MIDI_statemonitor.h"
+#include "devctl/devctl.h"
 
 #define PACKET_TIMEOUT       (8000ul)  // in 125us units, 8000 *0.125ms = 1000ms  until a packet is aborted
 #define PACKET_TIMEOUT_SHORT (800ul)   // in 125us units, 800  *0.125ms = 100ms    until the next packet is aborted
@@ -200,20 +201,44 @@ static inline void onReceive(OP, uint8_t *buff, uint32_t len)
   USB_MIDI_SuspendReceive(t->portNo, 1);
 }
 
-static void Receive_IRQ_Callback(uint8_t const port, uint8_t *buff, uint32_t len)
-{  // we use calls to the handler with port# as literal constant, to make inlining effective
-  if (port == 0)
-    onReceive(&packetTransfer[0], buff, len);
-  else
-    onReceive(&packetTransfer[1], buff, len);
+static void Receive_IRQ_Callback_0(uint8_t const port, uint8_t *buff, uint32_t len)
+{
+  onReceive(&packetTransfer[0], buff, len);
+}
+
+static void Receive_IRQ_Callback_1(uint8_t const port, uint8_t *buff, uint32_t len)
+{
+  onReceive(&packetTransfer[1], buff, len);
+}
+
+static void Receive_IRQ_DevCtlCallback(uint8_t const port, uint8_t *buff, uint32_t len)
+{
+  DEVCTL_processMsg(buff, len);
+}
+
+static void Receive_IRQ_FirstCallback(uint8_t const port, uint8_t *buff, uint32_t len)
+{
+  if (DEVCTL_isDeviceControlMsg(&buff, &len))
+  {
+    USB_MIDI_DeInit(port ^ 1);
+    USB_MIDI_Config(port ^ 1, NULL);
+
+    USB_MIDI_Config(port, Receive_IRQ_DevCtlCallback);
+    DEVCTL_processMsg(buff, len);
+    return;
+  }
+
+  USB_MIDI_Config(0, Receive_IRQ_Callback_0);
+  USB_MIDI_Config(1, Receive_IRQ_Callback_1);
+  onReceive(&packetTransfer[port], buff, len);
 }
 
 void MIDI_Relay_Init(void)
 {
   packetTransferReset(&packetTransfer[0]);
   packetTransferReset(&packetTransfer[1]);
-  USB_MIDI_Config(0, Receive_IRQ_Callback);
-  USB_MIDI_Config(1, Receive_IRQ_Callback);
+  USB_MIDI_Config(0, Receive_IRQ_FirstCallback);
+  USB_MIDI_Config(1, Receive_IRQ_FirstCallback);
   USB_MIDI_Init(0);
   USB_MIDI_Init(1);
 }

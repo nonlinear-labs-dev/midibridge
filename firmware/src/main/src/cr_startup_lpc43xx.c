@@ -481,7 +481,7 @@ __attribute__((section(".after_vectors"))) void NMI_Handler(void)
 }
 __attribute__((section(".after_vectors"))) void HardFault_Handler(void)
 {
-  faultDisplay;
+  faultDisplay();
 }
 __attribute__((section(".after_vectors"))) void MemManage_Handler(void)
 {
