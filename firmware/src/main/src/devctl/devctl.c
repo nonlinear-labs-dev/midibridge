@@ -1,6 +1,7 @@
 #include "midi/nl_devctl_defs.h"
 #include "devctl/devctl.h"
 #include "drv/nl_leds.h"
+#include "sys/nl_stdlib.h"
 
 static int memcmp(uint8_t const* const p, uint8_t const* const q, uint32_t const lenP, uint32_t const lenQ)
 {
@@ -18,6 +19,7 @@ static inline void error(LedColor_t const color)
 }
 
 #define CODE_START (0x10080000)  // Pointer to RamLoc40 at 0x10080000,
+#define CODE_SIZE  (0xA000)      // RamLoc40 is 40kB
 static uint8_t* code = (uint8_t*) CODE_START;
 #warning uploaded application must have its code entry point at 0x10080000 (==RamLoc40) !
 
@@ -68,7 +70,14 @@ static inline void parseEncodedByte(uint8_t byte)
     topBitsMask >>= 1;
 
     *(code++) = byte;
+    if (code - (uint8_t*) CODE_START >= CODE_SIZE)
+      error(COLOR_CYAN);
   }
+}
+
+void DEVCTL_init(void)
+{
+  memset(code, 0, CODE_SIZE);
 }
 
 void DEVCTL_processMsg(uint8_t* buff, uint32_t len)

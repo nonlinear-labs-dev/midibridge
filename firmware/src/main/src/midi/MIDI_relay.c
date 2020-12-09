@@ -222,8 +222,9 @@ static void Receive_IRQ_FirstCallback(uint8_t const port, uint8_t *buff, uint32_
   {
     USB_MIDI_DeInit(port ^ 1);
     USB_MIDI_Config(port ^ 1, NULL);
-
     USB_MIDI_Config(port, Receive_IRQ_DevCtlCallback);
+
+    DEVCTL_init();
     DEVCTL_processMsg(buff, len);
     return;
   }
