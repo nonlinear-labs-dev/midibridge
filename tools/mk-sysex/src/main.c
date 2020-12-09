@@ -1,161 +1,137 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <unistd.h>
 
-#include <alsa/asoundlib.h>
+#include "midi/nl_devctl_defs.h"
 
-#include "midi/nl_sysex.h"
-#include "midi/nl_ispmarkers.h"
-
-static void usage(char *message, int const quit)
+static void error(char const *const format, ...)
 {
-  if (message)
-    puts(message);
-  puts("Usage: nlmb-fwupload <midi-device> <firmware-image>");
-  puts("Upload and program a new firmware into the NLL MIDI Bridge via MIDI SysEx messages.");
-  puts("  <midi-device> typically is hw:1,0,0 when there is only one midi device attached");
-  puts("    (Use amidi -l to check connected devices select the NLL MIDI Bridge)");
-  puts("  <firmware-image> is the path to a firmware image. Not sanity checks are performed, so only");
-  puts("    use a file which you a sure that it contains a valid firmware for the NLL MIDI Bridge");
-  puts("  Note that the firmware upload will work only if it is the first MIDI transaction for the device");
-  puts("  after it was attached, otherwise the SysEx data will just be transmitted to the other side of the Bridge.");
-  if (quit)
-    exit(quit);
+  va_list ap;
+  fflush(stdout);
+  va_start(ap, format);
+  vfprintf(stderr, format, ap);
+  va_end(ap);
+  putc('\n', stderr);
+  fflush(stderr);
 }
 
-static size_t midiReceiveSysex(snd_rawmidi_t *const handle, uint8_t *const data, size_t maxBytes)
+static void usage(void)
 {
-  if (data == NULL)
-    usage("midiReceiveSysex : NULL pointer!", 3);
-  if (handle == NULL)
-    usage("midiReceiveSysex : NULL handle!", 3);
-
-  uint8_t byte;
-  ssize_t status;
-  size_t  total = 0;
-
-  // wait for sysex header
-  do
-  {
-    status = snd_rawmidi_read(handle, &byte, 1);
-    if (status <= 0)
-      usage("midiReceiveSysex: read from MIDI device failed!", 3);
-  } while (byte != 0xF0);
-  data[total++] = byte;
-
-  // copy data wait for sysex tail
-  while (1)
-  {
-    status = snd_rawmidi_read(handle, &byte, 1);
-    if (status <= 0)
-      usage("midiReceiveSysex: read from MIDI device failed!", 3);
-    if (byte == 0xF7)
-      break;
-    data[total++] = byte;
-  };
-  data[total++] = byte;
-  return total;
+  fflush(stderr);
+  puts("Usage: mk-sysex <in-file> <out-file>");
+  puts(" Generate a sysex (.syx) binary file from a binary input file,");
+  puts(" to be used to upload the binary to the NLL Midi Bridge.");
+  puts(" Payload data is encoded with the NLL 8-to-7 bit scheme.");
 }
 
-static void midiSend(snd_rawmidi_t *const handle, uint8_t const *const data, size_t const numBytes)
+#pragma pack(push, 1)
+static struct
 {
-  if (numBytes == 0)
-    return;
-  if (handle == NULL)
-    usage("midiSend : NULL handle!", 3);
-  ssize_t res;
-  if (res = snd_rawmidi_write(handle, data, numBytes))
+  uint8_t topBits;
+  uint8_t lsbytes[7];
+} encodeData;
+#pragma pack(pop)
+
+uint8_t topBitsMask;
+int     fillCount;
+
+static void flushAnyRemaingBuffer(FILE *outfile)
+{
+  if (fillCount != 0)
   {
-    if ((size_t) res != numBytes)
-      usage("midiSend: could not write message to MIDI output device!", 3);
-    snd_rawmidi_drain(handle);
+    if (1 != fwrite(&encodeData, fillCount + 1, 1, outfile))
+    {
+      error("could not write to output file!");
+      exit(3);
+    }
   }
 }
 
-static size_t receiveAndDecode(snd_rawmidi_t *const handle, uint8_t *const data, size_t const maxBytes)
+static void encodeAndWrite(uint8_t *buffer, size_t len, FILE *outfile)
 {
-  uint8_t  sysexBuffer[8 * maxBytes / 6];
-  uint16_t sysexSize = midiReceiveSysex(handle, sysexBuffer, 8 * maxBytes / 6);
-  uint16_t dataSize  = MIDI_decodeSysex(sysexBuffer, sysexSize, data);
-  return dataSize;
-}
+  while (len--)
+  {
+    if (topBitsMask == 0)  // need to start insert a new top bits byte ?
+    {
+      topBitsMask        = 0x40;  // reset top bit mask to first bit (bit6)
+      encodeData.topBits = 0;     // ...and clear top bits
+      fillCount          = 0;
+    }
+    uint8_t byte = *(buffer++);
+    if (byte & 0x80)
+      encodeData.topBits |= topBitsMask;  // add in top bit for this byte
+    topBitsMask >>= 1;
 
-static int encodeAndSend(snd_rawmidi_t *const handle, uint8_t *const data, size_t const numBytes, uint8_t *const sysexBuffer)
-{
-  if (numBytes == 0)
-    return 0;
-  uint16_t sysexBytes;
-  midiSend(handle, sysexBuffer, sysexBytes = MIDI_encodeSysex(data, numBytes, sysexBuffer));
-  return 1;
+    byte &= 0x7F;
+    encodeData.lsbytes[fillCount] = byte;
+    fillCount++;
+    if (fillCount == 7)
+    {
+      if (1 != fwrite(&encodeData, sizeof(encodeData), 1, outfile))
+      {
+        error("could not write to output file!");
+        exit(3);
+      }
+      fillCount = 0;
+    }
+  }
 }
 
 int main(int argc, char *argv[])
 {
   if (argc != 3)
-    usage("Wrong number of arguments!", 3);
-
-  snd_rawmidi_t *midiOut;
-  snd_rawmidi_t *midiIn;
-  if (snd_rawmidi_open(&midiIn, NULL, argv[1], SND_RAWMIDI_SYNC))
-    usage("Could not open MIDI input device!", 3);
-  if (snd_rawmidi_open(NULL, &midiOut, argv[1], SND_RAWMIDI_SYNC))
-    usage("Could not open MIDI output device!", 3);
-
-  FILE *imageFile;
-  if (NULL == (imageFile = fopen(argv[2], "rb")))
-    usage("Could not open image file", 3);
-
-#define BLOCKSIZE (750)           // will assure the encoded sysex fits into the 1k sysex buffer
-  uint8_t fileBuffer[BLOCKSIZE];  // read blocks of data from file
-  uint8_t sysexBuffer[1000];      // write blocks of encoded sysex to midi device
-
-  //
-  // write ISP_INFO message to device
-  midiSend(midiOut, ISP_INFO, sizeof ISP_INFO);
-  // read response
-  puts("reading firmware version string... (press CTRL-C if response does not show immediately)");
-  char     versionString[200];
-  uint16_t versionStringSize = receiveAndDecode(midiIn, versionString, sizeof versionString);
-  snd_rawmidi_close(midiIn);
-  if (versionStringSize > 1)
-    printf(" current firmware is '%s'\n", versionString);
-
-  printf("program new firmware? (y/n): ");
-  char c = getchar();
-  if (c != 'y' && c != 'Y')
   {
-    puts("programming aborted!");
-    exit(0);
+    error("Wrong number of arguments!");
+    usage();
+    return 3;
   }
 
-  //
-  // write ISP_START message to device
-  midiSend(midiOut, ISP_START, sizeof ISP_START);
+  FILE *inFile;
+  FILE *outFile;
+  if (NULL == (inFile = fopen(argv[1], "rb")))
+  {
+    error("Could not open input file %s", argv[1]);
+    return 3;
+  }
+  if (NULL == (outFile = fopen(argv[2], "wb")))
+  {
+    error("Could not open output file %s", argv[2]);
+    return 3;
+  }
 
-  //
-  // write ISP_END message to device
-  puts("uploading new firmware...");
+#define BLOCKSIZE (4096)
+  uint8_t inBuffer[BLOCKSIZE];  // read blocks of data from file
+
+  puts("writing device control header...");
+  if (1 != fwrite(NLMB_DevCtlSignature, sizeof(NLMB_DevCtlSignature), 1, outFile))
+  {
+    error("could not write to output file!");
+    return 3;
+  }
+
+  puts("encoding payload...");
   size_t bytes;
   size_t total = 0;
-  while (BLOCKSIZE == (bytes = fread(fileBuffer, 1, BLOCKSIZE, imageFile)))
+  while (BLOCKSIZE == (bytes = fread(inBuffer, 1, BLOCKSIZE, inFile)))
   {
-    if (encodeAndSend(midiOut, fileBuffer, BLOCKSIZE, sysexBuffer))
-      total += BLOCKSIZE;
+    encodeAndWrite(inBuffer, BLOCKSIZE, outFile);
+    total += BLOCKSIZE;
   }
-  if (encodeAndSend(midiOut, fileBuffer, bytes, sysexBuffer))
-    total += bytes;
-  fclose(imageFile);
+  encodeAndWrite(inBuffer, bytes, outFile);
+  flushAnyRemaingBuffer(outFile);
+  total += bytes;
+  printf("encoded %lu bytes of payload data.\n", total);
+  fclose(inFile);
 
-  //
-  // write ISP_END message to device
-  midiSend(midiOut, ISP_END, sizeof ISP_END);
-  printf(" %lu total bytes transferred to MIDI device.\n", total);
-
-  // write ISP_EXECUTE message to device
-  puts("flashing new firmware...");
-  midiSend(midiOut, ISP_EXECUTE, sizeof ISP_EXECUTE);
-
+  uint8_t byte = 0xF7;
+  if (1 != fwrite(&byte, sizeof(byte), 1, outFile))
+  {
+    error("could not write to output file!");
+    return 3;
+  }
+  fclose(outFile);
   puts("done");
   return 0;
 }
