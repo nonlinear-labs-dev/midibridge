@@ -15,7 +15,18 @@ static int memcmp(uint8_t const* const p, uint8_t const* const q, uint32_t const
 
 static inline void error(LedColor_t const color)
 {
-  LED_SetDirectAndHalt(color);
+  int toggle = 0;
+  __disable_irq();
+  LED_SetDirect(0, COLOR_WHITE);
+  while (1)
+  {
+    toggle = !toggle;
+    LED_SetDirect(1, toggle ? color : COLOR_OFF);
+
+    uint32_t cntr = 1000000ul;
+    while (cntr--)
+      asm volatile("nop");
+  }
 }
 
 #define CODE_START (0x10080000)  // Pointer to RamLoc40 at 0x10080000,
@@ -35,6 +46,7 @@ static void execute(void)
 
 // ----------------------------------------------
 // return 1 when a sysex header is found in the buffer that is for us
+// Buff and Len are updated to point/count to the payload after the signature
 int DEVCTL_isDeviceControlMsg(uint8_t** const pBuff, uint32_t* const pLen)
 {
   uint32_t const ID_SIZE = sizeof NLMB_DevCtlSignature_RAW;
@@ -69,14 +81,14 @@ static inline void parseEncodedByte(uint8_t byte)
       byte |= 0x80;  // set top bit when required
     topBitsMask >>= 1;
 
+    if ((code - (uint8_t*) CODE_START) + 1 > CODE_SIZE)
+      error(COLOR_MAGENTA);  // buffer would overrun
     *(code++) = byte;
-    if (code - (uint8_t*) CODE_START >= CODE_SIZE)
-      error(COLOR_CYAN);
   }
 }
 
 void DEVCTL_init(void)
-{
+{  // clear code buffer to have all data-segment uninitialized variables ("bss") zeroed
   memset(code, 0, CODE_SIZE);
 }
 
