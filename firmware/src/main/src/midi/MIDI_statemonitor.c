@@ -1,10 +1,10 @@
 #include "MIDI_statemonitor.h"
 #include "drv/nl_leds.h"
 
-#define usToTicks(x) (1 + (x) / 125ul)            // usecs to 125 ticker counts
-#define msToTicks(x) (1 + ((x) *1000ul) / 125ul)  // msecs to 125 ticker counts
+#define usToTicks(x) ((x + 75ul) / 125ul)            // usecs to 125 ticker counts
+#define msToTicks(x) (((x) *1000ul) / 125ul)  // msecs to 125 ticker counts
 
-#define LATE_TIME                     usToTicks(1000)  // time until packet is considered LATE
+#define LATE_TIME                     usToTicks(1125)  // time until packet is considered LATE
 #define STALE_TIME                    msToTicks(10)    // time until packet is considered STALE
 #define NORMAL_HOT_INDICATOR_TIMEOUT  msToTicks(20)    // minimum hot display duration after end of packets
 #define DROPPED_HOT_INDICATOR_TIMEOUT msToTicks(300)   // hot display time of any dropped packets
