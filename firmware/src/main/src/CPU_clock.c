@@ -47,7 +47,7 @@ void CPU_ConfigureClocks(void)
   Delay300();         // delay at least 300 µs
   CGU_UpdateClock();  // Update Clock Frequency
   Delay300();         // delay at least 300 µs
-  M4coreClock = 204000000ul;
+  M4coreClock = 120000000ul;
 //#endif
 
   /* connect USB0 to PLL0 which is set to 480 MHz */
