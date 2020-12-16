@@ -31,8 +31,8 @@ void CPU_ConfigureClocks(void)
   Delay300();                                               // delay at least 300 µs
 
   /* STEP 1: set cpu to mid frequency (according to datasheet) */
-  CGU_SetPLL1(6);  // f_osc x 6 = 72 MHz
-  M4coreClock = 6ul * 12000000ul;
+  CGU_SetPLL1(8);  // f_osc x 8 = 96 MHz
+  M4coreClock = 8ul * 12000000ul;
   Delay300();                                 // delay at least 300 µs
   CGU_EnableEntity(CGU_CLKSRC_PLL1, ENABLE);  // Enable PLL1 after setting is done
   Delay300();                                 // delay at least 300 µs
@@ -41,14 +41,14 @@ void CPU_ConfigureClocks(void)
   CGU_UpdateClock();
   Delay300();  // delay at least 300 µs
 
-#ifdef DEBUG
+//#ifdef DEBUG
   /* STEP 2: set cpu to high frequency */
-  CGU_SetPLL1(17);    // set PLL1 to: f_osc x 17 = 204 MHz
+  CGU_SetPLL1(10);    // set PLL1 to: f_osc x 10 = 120 MHz
   Delay300();         // delay at least 300 µs
   CGU_UpdateClock();  // Update Clock Frequency
   Delay300();         // delay at least 300 µs
   M4coreClock = 204000000ul;
-#endif
+//#endif
 
   /* connect USB0 to PLL0 which is set to 480 MHz */
   CGU_EnableEntity(CGU_CLKSRC_PLL0, DISABLE);
