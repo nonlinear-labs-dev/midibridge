@@ -14,11 +14,12 @@
 /** bcdUSB 2.0 */
 #define BCDUSB_2_0 0x0200
 /** Vendor Id */
-#define VENDOR_ID 0xFFFF
+#define VENDOR_ID 0x4E4C  // unofficial, "NL"
 /** Product Id */
-#define PRODUCT_ID 0x0005
+#define PRODUCT_ID_0 0x0031
+#define PRODUCT_ID_1 0x0032
 /** bcdDevice */
-#define BCD_DEVICE 0x0001
+#define BCD_DEVICE 0x0100
 /** @} */
 
 /** Size of the configuration block */
@@ -106,7 +107,8 @@
 #define MIDI_EP_IN 0x02
 /** @} */
 
-extern const uint8_t USB_MIDI_DeviceDescriptor[];
+extern const uint8_t USB0_MIDI_DeviceDescriptor[];
+extern const uint8_t USB1_MIDI_DeviceDescriptor[];
 extern const uint8_t USB_MIDI_FSConfigDescriptor[];
 extern const uint8_t USB_MIDI_HSConfigDescriptor[];
 extern const uint8_t USB0_MIDI_StringDescriptor[];

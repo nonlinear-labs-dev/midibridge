@@ -106,7 +106,7 @@ void USB_MIDI_Init(uint8_t const port)
   usbMidi[port].suspendReceive = 0;
   usbMidi[port].primed         = 0;
   /** assign descriptors */
-  USB_Core_Device_Descriptor_Set(port, (const uint8_t *) USB_MIDI_DeviceDescriptor);
+  USB_Core_Device_Descriptor_Set(port, (const uint8_t *) (port == 0) ? USB0_MIDI_DeviceDescriptor : USB1_MIDI_DeviceDescriptor);
   USB_Core_Device_FS_Descriptor_Set(port, (const uint8_t *) USB_MIDI_FSConfigDescriptor);
   USB_Core_Device_HS_Descriptor_Set(port, (const uint8_t *) USB_MIDI_HSConfigDescriptor);
   USB_Core_Device_String_Descriptor_Set(port, (const uint8_t *) (port == 0) ? USB0_MIDI_StringDescriptor : USB1_MIDI_StringDescriptor);

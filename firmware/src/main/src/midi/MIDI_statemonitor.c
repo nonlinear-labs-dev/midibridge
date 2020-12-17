@@ -1,7 +1,7 @@
 #include "MIDI_statemonitor.h"
 #include "drv/nl_leds.h"
 
-#define usToTicks(x) ((x + 75ul) / 125ul)            // usecs to 125 ticker counts
+#define usToTicks(x) ((x + 75ul) / 125ul)     // usecs to 125 ticker counts
 #define msToTicks(x) (((x) *1000ul) / 125ul)  // msecs to 125 ticker counts
 
 #define LATE_TIME                     usToTicks(1125)  // time until packet is considered LATE

@@ -13,7 +13,7 @@
 #include "usb/nl_usb_descmidi.h"
 
 /* USB Standard Device Descriptor */
-const uint8_t USB_MIDI_DeviceDescriptor[] = {
+const uint8_t USB0_MIDI_DeviceDescriptor[] = {
   USB_DEVICE_DESC_SIZE,       /* bLength */
   USB_DEVICE_DESCRIPTOR_TYPE, /* bDescriptorType */
   WBVAL(BCDUSB_2_0),          /* bcdUSB */
@@ -22,7 +22,23 @@ const uint8_t USB_MIDI_DeviceDescriptor[] = {
   0x00,                       /* bDeviceProtocol */
   USB_MAX_PACKET0,            /* bMaxPacketSize */
   WBVAL(VENDOR_ID),           /* idVendor */
-  WBVAL(PRODUCT_ID),          /* idProduct */
+  WBVAL(PRODUCT_ID_0),        /* idProduct */
+  WBVAL(BCD_DEVICE),          /* bcdDevice */
+  0x01,                       /* iManufacturer */
+  0x02,                       /* iProduct */
+  0x00,                       /* iSerialNumber */
+  0x01,                       /* bNumConfigurations */
+};
+const uint8_t USB1_MIDI_DeviceDescriptor[] = {
+  USB_DEVICE_DESC_SIZE,       /* bLength */
+  USB_DEVICE_DESCRIPTOR_TYPE, /* bDescriptorType */
+  WBVAL(BCDUSB_2_0),          /* bcdUSB */
+  0x00,                       /* bDeviceClass */
+  0x00,                       /* bDeviceSubClass */
+  0x00,                       /* bDeviceProtocol */
+  USB_MAX_PACKET0,            /* bMaxPacketSize */
+  WBVAL(VENDOR_ID),           /* idVendor */
+  WBVAL(PRODUCT_ID_1),        /* idProduct */
   WBVAL(BCD_DEVICE),          /* bcdDevice */
   0x01,                       /* iManufacturer */
   0x02,                       /* iProduct */
