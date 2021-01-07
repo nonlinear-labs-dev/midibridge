@@ -57,7 +57,7 @@ const uint8_t USB_MIDI_FSConfigDescriptor[] = {
   0x01,                     /* bConfigurationValue: 0x01 is used to select this configuration */
   0x00,                     /* iConfiguration: no string to describe this configuration */
   USB_CONFIG_BUS_POWERED,   /* bmAttributes */
-  USB_CONFIG_POWER_MA(100), /* bMaxPower, device power consumption is 100 mA */
+  USB_CONFIG_POWER_MA(200), /* bMaxPower, device power consumption is 200 mA */
                             /** Interface 0: Standard Audio Control interface */
   USB_INTERFACE_DESC_SIZE,
   USB_INTERFACE_DESCRIPTOR_TYPE,
@@ -171,7 +171,7 @@ const uint8_t USB_MIDI_HSConfigDescriptor[] = {
   0x01,                     /* bConfigurationValue: 0x01 is used to select this configuration */
   0x00,                     /* iConfiguration: no string to describe this configuration */
   USB_CONFIG_BUS_POWERED,   /* bmAttributes */
-  USB_CONFIG_POWER_MA(100), /* bMaxPower, device power consumption is 100 mA */
+  USB_CONFIG_POWER_MA(200), /* bMaxPower, device power consumption is 200 mA */
                             /** Interface 0: Standard Audio Control interface */
   USB_INTERFACE_DESC_SIZE,
   USB_INTERFACE_DESCRIPTOR_TYPE,
