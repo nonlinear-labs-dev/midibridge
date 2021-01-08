@@ -3,6 +3,7 @@
 	<name>sysex-isp</name>
 	<comment></comment>
 	<projects>
+		<project>main</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
@@ -30,9 +31,64 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>src/shared/cmsis</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>src/shared/io</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>src/shared/cmsis/LPC43xx.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/cmsis/LPC43xx.h</locationURI>
+		</link>
+		<link>
+			<name>src/shared/cmsis/core_cmFunc.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/cmsis/core_cmFunc.h</locationURI>
+		</link>
+		<link>
+			<name>src/shared/cmsis/core_cmInstr.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/cmsis/core_cmInstr.h</locationURI>
+		</link>
+		<link>
+			<name>src/shared/cmsis/lpc43xx_cgu.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/cmsis/lpc43xx_cgu.c</locationURI>
+		</link>
+		<link>
+			<name>src/shared/cmsis/lpc43xx_cgu.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/cmsis/lpc43xx_cgu.h</locationURI>
+		</link>
+		<link>
+			<name>src/shared/cmsis/lpc43xx_gpdma.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/cmsis/lpc43xx_gpdma.h</locationURI>
+		</link>
+		<link>
+			<name>src/shared/cmsis/lpc43xx_ssp.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/cmsis/lpc43xx_ssp.h</locationURI>
+		</link>
+		<link>
+			<name>src/shared/cmsis/lpc43xx_uart.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/cmsis/lpc43xx_uart.h</locationURI>
+		</link>
+		<link>
+			<name>src/shared/cmsis/lpc_types.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/cmsis/lpc_types.h</locationURI>
+		</link>
+		<link>
+			<name>src/shared/cmsis/system_LPC43xx.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/cmsis/system_LPC43xx.h</locationURI>
 		</link>
 		<link>
 			<name>src/shared/io/pins.h</name>

@@ -51,5 +51,5 @@ SECTIONS
         _end_noinit = .;
     } > RamLoc40
 
-    PROVIDE(_startOfAttachment = .);
+    /* PROVIDE(_startOfAttachment = .); */
 }
