@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "cmsis/lpc43xx_cgu.h"
 
+#define CLOCK_MULT (17)  // 17 * 12MHz --> 204MHz
 uint32_t M4coreClock;
 
 static void Delay300(void);
@@ -50,11 +51,11 @@ void CPU_ConfigureClocks(void)
   M4coreClock = 204000000ul;
 #else
   /* STEP 2: set cpu to a high frequency */
-  CGU_SetPLL1(17);    // set PLL1 to: f_osc x 17 = 204 MHz
-  Delay300();         // delay at least 300 µs
-  CGU_UpdateClock();  // Update Clock Frequency
-  Delay300();         // delay at least 300 µs
-  M4coreClock = 204000000ul;
+  CGU_SetPLL1(CLOCK_MULT);  // set PLL1 to: f_osc (12MHz) x CLOCK_MULT
+  Delay300();               // delay at least 300 µs
+  CGU_UpdateClock();        // Update Clock Frequency
+  Delay300();               // delay at least 300 µs
+  M4coreClock = CLOCK_MULT * 12000000ul;
 #endif
 
   /* connect USB0 to PLL0 which is set to 480 MHz */
