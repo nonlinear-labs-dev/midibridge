@@ -23,10 +23,10 @@
 #define LED_F           GPIO_Word(1,  9)
 
 // LED assignments :
-#define LED_RED0	 LED_A
+#define LED_RED0    LED_A
 #define LED_GREEN0  LED_B
 #define LED_BLUE0   LED_C
-#define LED_RED1	 LED_D
+#define LED_RED1    LED_D
 #define LED_GREEN1  LED_E
 #define LED_BLUE1   LED_F
 

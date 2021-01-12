@@ -57,7 +57,7 @@
 #define CGU_ADDRESS32(x, y) (*(uint32_t *) ((uint32_t) x + y))
 
 /* Local Variable */
-const int16_t CGU_Entity_ControlReg_Offset[CGU_ENTITY_NUM] = {
+static const int16_t CGU_Entity_ControlReg_Offset[CGU_ENTITY_NUM] = {
   -1,    //CGU_CLKSRC_32KHZ_OSC,
   -1,    //CGU_CLKSRC_IRC,
   -1,    //CGU_CLKSRC_ENET_RX_CLK,
@@ -106,7 +106,7 @@ const int16_t CGU_Entity_ControlReg_Offset[CGU_ENTITY_NUM] = {
   0xC8   //CGU_BASE_OUT1
 };
 
-const uint8_t CGU_ConnectAlloc_Tbl[CGU_CLKSRC_NUM][CGU_ENTITY_NUM] = {
+static const uint8_t CGU_ConnectAlloc_Tbl[CGU_CLKSRC_NUM][CGU_ENTITY_NUM] = {
   //       3 I E E G T X P P P x x D D D D D S U P U M S x P P A A L E S S S U U U U C x x x x A O O
   //       2 R R T P C T L L L     I I I I I A S E S 3 P   H H P P C N D S S R R R R O         P U U
   //         C X X I K A 0 A 1     A B C D E F B R B   F   RxTx1 3 D T I 0 1 0 1 2 3           L T T
@@ -129,7 +129,7 @@ const uint8_t CGU_ConnectAlloc_Tbl[CGU_CLKSRC_NUM][CGU_ENTITY_NUM] = {
   { 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1 }  /*CGU_CLKSRC_IDIVE,*/
 };
 
-const CGU_PERIPHERAL_S CGU_PERIPHERAL_Info[CGU_PERIPHERAL_NUM] = {
+static const CGU_PERIPHERAL_S CGU_PERIPHERAL_Info[CGU_PERIPHERAL_NUM] = {
   /*	Register Clock			|	Peripheral Clock
 		 |	BASE	|		BRANCH	|	BASE		|	BRANCH		*/
   { CGU_BASE_APB3, 0x1118, CGU_ENTITY_NONE, 0x0000, 0 },  //CGU_PERIPHERAL_ADC0,
@@ -174,7 +174,7 @@ const CGU_PERIPHERAL_S CGU_PERIPHERAL_Info[CGU_PERIPHERAL_NUM] = {
   { CGU_BASE_M4, 0x1500, CGU_BASE_SAFE, 0x0000, 0 },                             //CGU_PERIPHERAL_WWDT,
 };
 
-uint32_t CGU_ClockSourceFrequency[CGU_CLKSRC_NUM] = { 0, 12000000, 0, 0, 0, 0, 0, 480000000, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+static uint32_t CGU_ClockSourceFrequency[CGU_CLKSRC_NUM] = { 0, 12000000, 0, 0, 0, 0, 0, 480000000, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 #define CGU_CGU_ADDR             ((uint32_t) LPC_CGU)
 #define CGU_REG_BASE_CTRL(x)     (*(uint32_t *) (CGU_CGU_ADDR + CGU_Entity_ControlReg_Offset[CGU_PERIPHERAL_Info[x].RegBaseEntity]))

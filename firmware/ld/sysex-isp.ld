@@ -11,6 +11,15 @@ SECTIONS
         *(.rodata .rodata.* .constdata .constdata.*)
         . = ALIGN(4);
     } > RamLoc40
+
+    .text : ALIGN(4)    
+    {
+        FILL(0xff)
+        __bss_section_start = .;
+        LONG(ADDR(.bss));
+        __bss_section_size = .;
+        LONG(SIZEOF(.bss));
+    } > RamLoc40
         
     /* MAIN DATA SECTION */
     .uninit_RESERVED : ALIGN(4)
@@ -50,6 +59,4 @@ SECTIONS
          . = ALIGN(4) ;
         _end_noinit = .;
     } > RamLoc40
-
-    /* PROVIDE(_startOfAttachment = .); */
 }
