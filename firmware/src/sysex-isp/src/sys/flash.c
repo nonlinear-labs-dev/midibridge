@@ -50,7 +50,7 @@ static int iapPrepSectorsForWrite(uint32_t const startSector, uint32_t const end
   return statusResult[0] == IAP_CMD_SUCCESS;
 }
 
-static int iapCopyRamToFlash(uint32_t const *const dest, uint32_t const *const src, uint32_t const bytes)
+static int iapCopyRamToFlash(uint32_t const *const src, uint32_t const *const dest, uint32_t const bytes)
 {
   LedB(0b100);
   commandParam[0] = 51;  // CMD : Write
@@ -74,40 +74,57 @@ static int iapEraseSectors(uint32_t const startSector, uint32_t const endSector,
   return statusResult[0] == IAP_CMD_SUCCESS;
 }
 
-static int iapSelectActiveBootBank(uint32_t const bank)
-{
-  LedB(0b100);
-  commandParam[0] = 60;  // CMD : SelectBoot
-  commandParam[1] = bank;
-  commandParam[2] = CGU_GetPCLKFrequency(CGU_PERIPHERAL_M4CORE) / 1000;
-  iapEntry(commandParam, statusResult);
-  return statusResult[0] == IAP_CMD_SUCCESS;
-}
-
-// buf : data in RAM(!!), word boundary, there must be at least 36kB from start
-// len : ignored
+// buf : data in RAM(!!), on a word boundary
+// len : length of data in bytes
 // bank: 0/1 (Bank A / Bank B)
-// returns 1 on success, 0 otherwise
-int flashMemory(uint32_t const *const buf, uint16_t const len, uint8_t const bank)
+// returns 0 on success, else the step # where it failed
+int flashMemory(uint32_t const *buf, uint32_t len, uint8_t bank)
 {
   static uint32_t *const flashBankAdr[2] = { (uint32_t *) 0x1A000000, (uint32_t *) 0x1B000000 };
+  uint32_t               flashBuffer[1024];  // 4kB buffer, residing in the stack to save data segment space
 
   __disable_irq();
   LedA(0b000);
   iapInit();
-  // Prep and erase 5 sectors 8kB each (40k total)
-  if (iapPrepSectorsForWrite(0, 4, bank != 0) && iapEraseSectors(0, 4, bank != 0))
-  {
-    // Flash only 36kB of the buffer, 4k are left for us and the boot/init code of the ISP overlay
-    // The "len" parameter is ignored, for now
-    for (int i = 0; i < 9; i++)
-    {  // prep those 5 sectors again and flash a 4k chunk of data
-      LedA(i + 1);
-      iapPrepSectorsForWrite(0, 4, bank != 0);
-      if (!iapCopyRamToFlash(&(flashBankAdr[bank != 0][i * 1024]), &(buf[i * 1024]), 4096))
-        return 0;
-    }
+
+  // align len to a 4-byte multiple and make it a word count
+  while ((len & 3) != 0)
+    len++;
+  len >>= 2;
+
+  bank               = (bank != 0);
+  uint32_t  sector   = 0;
+  uint32_t *flashAdr = flashBankAdr[bank];
+
+  // erase flash (40kBytes, 5 sectors 8kBytes each)
+  if (!(iapPrepSectorsForWrite(0, 4, bank) && iapEraseSectors(0, 4, bank)))
     return 1;
+
+  while (len > 0)
+  {
+    // copy a at most 4kBytes chunk into flashBuffer
+    uint32_t toCopy = len;
+    if (toCopy > 1024)
+      toCopy = 1024;
+    for (uint32_t i = 0; i < toCopy; i++, buf++)
+      flashBuffer[i] = *buf;
+
+    // zero any remaining unused space
+    for (uint32_t i = toCopy; i < 1024; i++)
+      flashBuffer[i] = 0;
+
+    // prepare affected sector. We need to increment the sector number after every
+    // second 4kB block of data as a sector is 8kB, the right-shift affords this
+    if (!iapPrepSectorsForWrite(sector >> 1, sector >> 1, bank))
+      return 2;
+    sector++;
+
+    // flash chunk
+    if (!iapCopyRamToFlash(flashBuffer, flashAdr, 4096))
+      return 3;
+
+    flashAdr += 1024;  // next 4kB start adr
+    len -= toCopy;
   }
   return 0;
 }
