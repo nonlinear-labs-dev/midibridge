@@ -3,7 +3,6 @@
 #include "io/pins.h"
 #include "sys/flash.h"
 #include "CPU_clock.h"
-#include "sys/incbin.h"
 
 static inline void LedA(uint8_t const rgb)
 {
@@ -19,25 +18,45 @@ static inline void LedB(uint8_t const rgb)
   LED_BLUE1  = !(rgb & 0b100);
 }
 
-// the code actually to be flashed is included as an object
-// at compile time from  final output file of dependent project "main".
-#warning FIXME: make this work with linux automated build system
-#ifdef LPCXPRESSO
-INCBIN(Code, "../../main/Release/main.bin");
-#else
-INCBIN(Code, <some auto - generated path>);
-#endif
+// these symbols are provided by the dependent project "main",
+// which first makes a binary file (*.bin) from it's compile
+// and then a linkable object file (*.o) from that which creates
+// these symbols
+extern uint8_t _binary_main_bin_start;
+extern uint8_t _binary_main_bin_end;
+extern uint8_t _binary_main_bin_size;
+
+extern uint32_t *__bss_section_start;
+extern uint32_t  __bss_section_size;
+
+static uint32_t stack = 0x2000C000;  // stack at RamAHB16 (rwx) : ORIGIN = 0x20008000, LENGTH = 0x4000
 
 __attribute__((section(".codeentry"))) int main(void)
 {
+  // Note we set up a new stack, to contain a 4kB buffer space, as we won't return anyway.
+  // Initialized (.data) and zero-initialized (.bss) data segments are allowed.
+  // Initialized data is not copied to RAM as we already reside in RAM.
+  // Also note that the linker definitions for the RAM we are living in must be correct
+  // and exactly the same for both this and the main project (see linker scripts).
+  // Further, it must be a different RAM that the one used for the stack!
+  // Currently, the RAM at RamLoc40 is used for our code/data (RamLoc40 (rwx) : ORIGIN = 0x10080000, LENGTH = 0xa000)
+
   __disable_irq();
+  asm volatile("ldr sp, [%0]" ::"r"(&stack));  // setup our stack
+
+  // zero the zero-initialized data section (.bss)
+  uint32_t  count = __bss_section_size >> 2;  // get word count
+  uint32_t *p     = __bss_section_start;
+  while (count--)
+    *(p++) = 0;
+
   LedA(0b001);
   LedB(0b000);
   CPU_ConfigureClocks();
 
   LedA(0b010);
   FLASH_Init();
-  int fail = !flashMemory((uint32_t *) gCodeData, gCodeSize, 0);  // 36k to flash A
+  int fail = flashMemory((uint32_t *) &_binary_main_bin_start, (uint32_t) &_binary_main_bin_size, 0);  // 36k to flash A
 
 #define MAX (3000000ul);
   int toggle = 1;
@@ -48,14 +67,16 @@ __attribute__((section(".codeentry"))) int main(void)
       asm volatile("nop");
     toggle = !toggle;
     if (toggle)
-    {
-      LedA(fail ? 0b001 : 0b010);
-      LedB(fail ? 0b001 : 0b010);
+    {                              // both green for success, else color-code the failed step number
+      LedA(fail ? 0b001 : 0b010);  // green=success, red=fail
+      LedB(fail ? fail : 0b010);   // green on success, else step number (1:red/2:green/3:yellow)
     }
     else
     {
-      LedA(0b000);
+      if (!fail)
+        LedA(0b000);
       LedB(0b000);
     }
   }
+  // !! main must NOT return as we've overwritten the code as well as the caller's stack !!
 }
