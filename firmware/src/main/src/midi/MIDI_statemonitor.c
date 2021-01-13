@@ -1,5 +1,6 @@
 #include "MIDI_statemonitor.h"
 #include "drv/nl_leds.h"
+#include "sys/fwdisplay.h"
 
 #define usToTicks(x) ((x + 75ul) / 125ul)     // usecs to 125 ticker counts
 #define msToTicks(x) (((x) *1000ul) / 125ul)  // msecs to 125 ticker counts
@@ -69,6 +70,7 @@ static inline void setupDisplay(uint8_t const port);
 static inline void doDisplay(uint8_t const port);
 static inline void setLED(uint8_t const port, LedColor_t const color, Brightness_t const bright, Blink_t const blink);
 static inline void doTimers(void);
+static inline void setLedDirect(uint8_t const port, LedColor_t const color);
 
 // may be called from within interrupt callbacks !
 void SMON_monitorEvent(uint8_t const port, MonitorEvent_t const event)
@@ -265,9 +267,16 @@ static inline void doDisplay(uint8_t const port)
   if (led[port].blink && (blinkCntr < BLINK_TIME_OFF_TIME))
     output = 0;
   if (output)
-    LED_SetDirect(port, led[port].color);
+    setLedDirect(port, led[port].color);
   else
-    LED_SetDirect(port, COLOR_OFF);
+    setLedDirect(port, COLOR_OFF);
+}
+
+static inline void setLedDirect(uint8_t const port, LedColor_t const color)
+{
+  if (showFirmwareVersion())
+    return;
+  LED_SetDirect(port, color);
 }
 
 static inline void setLED(uint8_t const port, LedColor_t const color, Brightness_t const bright, Blink_t const blink)
