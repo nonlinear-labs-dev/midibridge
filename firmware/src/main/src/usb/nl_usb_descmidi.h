@@ -8,6 +8,8 @@
 *******************************************************************************/
 #pragma once
 
+#include "sys/nl_version.h"
+
 /** MIDI device descriptor fields
  * @{
  */
@@ -19,7 +21,7 @@
 #define PRODUCT_ID_0 0x0031
 #define PRODUCT_ID_1 0x0032
 /** bcdDevice */
-#define BCD_DEVICE 0x0100
+#define BCD_DEVICE ((SW_VERSION_MAJOR << 8) | (SW_VERSION_MINOR_H << 4) | SW_VERSION_MINOR_L)
 /** @} */
 
 /** Size of the configuration block */
