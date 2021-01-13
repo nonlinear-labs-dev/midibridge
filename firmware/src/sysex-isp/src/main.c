@@ -3,6 +3,7 @@
 #include "io/pins.h"
 #include "sys/flash.h"
 #include "CPU_clock.h"
+#include "sys/nl_version.h"
 
 static void LedA(uint8_t const rgb)
 {
@@ -31,6 +32,18 @@ extern uint32_t  __bss_section_size;
 
 static uint32_t stack = 0x2000C000;  // stack at RamAHB16 (rwx) : ORIGIN = 0x20008000, LENGTH = 0x4000
 
+static const char LOCAL_VERSION_STRING[] = "\n\nNLL MIDI Host-to-Host Bridge In-Application Flasher, LPC4337, FIRMWARE VERSION: " SW_VERSION " \n\n\0\0\0";
+
+volatile char dummy;
+
+void dummyFunction(const char *string)
+{
+  while (*string)
+  {
+    dummy = *string++;
+  }
+}
+
 __attribute__((section(".codeentry"))) int main(void)
 {
   // Note we set up a new stack, to contain a 4kB buffer space, as we won't return anyway.
@@ -43,6 +56,7 @@ __attribute__((section(".codeentry"))) int main(void)
 
   __disable_irq();
   asm volatile("ldr sp, [%0]" ::"r"(&stack));  // setup our stack
+  dummyFunction(LOCAL_VERSION_STRING);
 
   // zero the zero-initialized data section (.bss)
   uint32_t  count = __bss_section_size >> 2;  // get word count
