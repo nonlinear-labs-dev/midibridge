@@ -38,5 +38,5 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
 include_directories ("./src/shared")
 
-add_subdirectory (src/co-proc)
 add_subdirectory (src/main)
+add_subdirectory (src/sysex-isp)
