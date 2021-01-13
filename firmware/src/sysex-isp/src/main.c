@@ -4,14 +4,14 @@
 #include "sys/flash.h"
 #include "CPU_clock.h"
 
-static inline void LedA(uint8_t const rgb)
+static void LedA(uint8_t const rgb)
 {
   LED_RED0   = !(rgb & 0b001);
   LED_GREEN0 = !(rgb & 0b010);
   LED_BLUE0  = !(rgb & 0b100);
 }
 
-static inline void LedB(uint8_t const rgb)
+static void LedB(uint8_t const rgb)
 {
   LED_RED1   = !(rgb & 0b001);
   LED_GREEN1 = !(rgb & 0b010);

@@ -74,7 +74,7 @@ static int iapEraseSectors(uint32_t const startSector, uint32_t const endSector,
   return statusResult[0] == IAP_CMD_SUCCESS;
 }
 
-// buf : data in RAM(!!), on a word boundary
+// buf : data, on a word boundary
 // len : length of data in bytes
 // bank: 0/1 (Bank A / Bank B)
 // returns 0 on success, else the step # where it failed

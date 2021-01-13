@@ -9,15 +9,15 @@
 
 //
 // Places the variable(s) in the shared memory block.
-// This block must be defined in C15_LPC4337_MEM.ld.
-// The section used must be defined in both C15_LPC4337_M0.ld and C15_LPC4337_M4.ld identically
+// This block must be defined in main.ld.
+// The section used must be defined in both main.ld and sysex_isp.ld identically
 // and must be defined properly and identically in the *_MEM.ld script includes.
 // When the size of all shared variables is larger than the block the linker will throw an error.
-// To make sure all variable are at the same memory location and have the same layout,
+// To make sure all variables are at the same memory location and have the same layout,
 // use only one single struct and embed all your variables there.
-// The section is defined as "noinit" so you must clear the data yourself.
-//
-__attribute__((section(".data.$RamAHB16"))) SharedData_T s;
+// You might want clear/initialize the data manually at execution time as
+// clear/init is not guaranteed, depending on init code
+__attribute__((section(".data.$RamAHB_ETB16"))) SharedData_T s;
 
 // double-check the used memory
 void CheckSizeAtCompileTime(void)
