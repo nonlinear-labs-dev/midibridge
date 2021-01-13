@@ -28,7 +28,6 @@ add_custom_command(OUTPUT ${BLOBNAME}.syx
     DEPENDS main.image
     DEPENDS mk-sysex
     COMMAND arm-none-eabi-objcopy --verbose --strip-all -O binary --remove-section=.ARM.attributes --remove-section=".bss*" --remove-section=".noinit*" ${BLOBNAME} ${BLOBNAME}.bin
-#   COMMAND cp       ${BLOBNAME}.bin ${BLOBNAME}.syx
     COMMAND mk-sysex ${BLOBNAME}.bin ${BLOBNAME}.syx
 )
 
