@@ -1,7 +1,6 @@
 set(BLOBNAME "main")
 
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m4 -mthumb")
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfpu=fpv4-sp-d16 -mfloat-abi=none")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fno-builtin -nodefaultlibs -nostdlib")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-common -fmessage-length=0 -ffunction-sections -fdata-sections ")
@@ -22,9 +21,13 @@ set_target_properties(${BLOBNAME} PROPERTIES LINKER_LANGUAGE C)
 set_target_properties(${BLOBNAME} PROPERTIES LINK_FLAGS "-Tmain.ld")
 set_target_properties(${BLOBNAME} PROPERTIES COMPILE_FLAGS "${CMAKE_C_FLAGS}")
 
-add_custom_target(${BLOBNAME}.o
-    COMMENT "Create ${BLOBNAME}.o"
+add_custom_command(OUTPUT ${BLOBNAME}.o
     DEPENDS ${BLOBNAME}
-    COMMAND arm-none-eabi-objcopy -v -O binary ${BLOBNAME} ${BLOBNAME}.bin
-    COMMAND arm-none-eabi-objcopy -v -I binary -O elf32-littlearm -B armv7e-m ${BLOBNAME}.bin ${BLOBNAME}.o
+    COMMAND arm-none-eabi-objcopy --verbose --strip-all -O binary --remove-section=.ARM.attributes --remove-section=".bss*" --remove-section=".noinit*" ${BLOBNAME} ${BLOBNAME}.bin
+    COMMAND arm-none-eabi-objcopy -v -I binary -O elf32-littlearm -B arm ${BLOBNAME}.bin ${BLOBNAME}.o
+)
+
+add_custom_target(${BLOBNAME}.image ALL
+    COMMENT "Create ${BLOBNAME}.o"
+    DEPENDS ${BLOBNAME}.o
 )

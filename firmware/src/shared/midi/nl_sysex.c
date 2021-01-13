@@ -1,4 +1,5 @@
 #include "midi/nl_sysex.h"
+#include "sys/nl_stdlib.h"
 
 // functions for plain MIDI data
 
@@ -43,7 +44,7 @@ uint16_t MIDI_encodeSysex(uint8_t const* src, uint32_t len, uint8_t* const dest)
 {
   uint8_t* dst         = (uint8_t*) dest;
   uint8_t  topBitsMask = 0;
-  uint8_t* topBits;
+  uint8_t* topBits     = NULL;
 
   // write start of sysex
   *(dst++) = 0xF0;
@@ -127,7 +128,7 @@ uint16_t MIDI_encodeRawSysex(uint8_t const* src, uint32_t len, uint8_t* const de
   uint8_t* packet = (uint8_t*) dest;
   uint8_t  packetPayloadIndex;
   uint8_t  topBitsMask = 0;
-  uint8_t* topBits;
+  uint8_t* topBits     = NULL;
 
   // write start of sysex
   packet[0]          = 0x04;
