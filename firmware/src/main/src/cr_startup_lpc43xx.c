@@ -455,7 +455,7 @@ void ResetISR(void)
 }
 
 static inline void faultDisplay(void)
-{
+{  // both LEDs white
   LED_A    = 0;
   LED_B    = 0;
   LED_C    = 0;

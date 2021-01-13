@@ -182,7 +182,7 @@ static inline void onReceive(OP, uint8_t *buff, uint32_t len)
     return;  // just in case incoming port went offline and we still got an interrupt
 
   if (len > 512)  // we should never ever receive a packet longer than the fixed(!) 512Bytes HS bulk size max
-    LED_SetDirectAndHalt(COLOR_WHITE);
+    LED_SetDirectAndHalt(COLOR_RED);
 
   if (!t->outgoingTransfer->online)  // outgoing port is offline, mark packet as dismissed
   {
