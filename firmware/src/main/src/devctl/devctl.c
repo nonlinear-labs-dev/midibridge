@@ -23,7 +23,7 @@ static inline void error(LedColor_t const color)
     toggle = !toggle;
     LED_SetDirect(1, toggle ? color : COLOR_OFF);
 
-    uint32_t cntr = 1000000ul;
+    uint32_t cntr = 3000000ul;
     while (cntr--)
       asm volatile("nop");
   }

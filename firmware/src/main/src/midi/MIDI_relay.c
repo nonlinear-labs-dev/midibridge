@@ -191,7 +191,7 @@ static inline void onReceive(OP, uint8_t *buff, uint32_t len)
   }
 
   if (t->state != IDLE)  // we should never receive a packet when not IDLE
-    LED_SetDirectAndHalt(COLOR_WHITE);
+    LED_SetDirectAndHalt(COLOR_MAGENTA);
 
   // setup packet transfer data ...
   t->pData = buff;
