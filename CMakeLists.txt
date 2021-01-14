@@ -2,5 +2,9 @@ cmake_minimum_required(VERSION 3.2)
 
 project(midibridge)
 
-add_subdirectory(firmware)
-add_subdirectory(tools)
+
+set(FIRMWARE_DIRNAME firmware)
+set(TOOLS_DIRNAME    tools)
+
+add_subdirectory(${FIRMWARE_DIRNAME})
+add_subdirectory(${TOOLS_DIRNAME})

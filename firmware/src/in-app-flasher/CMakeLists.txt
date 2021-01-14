@@ -1,4 +1,4 @@
-set(BLOBNAME "sysex-isp")
+# input variables: MAIN_APP_NAME, FLASH_APP_NAME, LINKER_SCRIPT_SUFFIX, SYSEX_SUFFIX, SYSEX_TARGET_SUFFIX, IMAGE_OBJECT_SUFFIX, IMAGE_OBJECT_TARGET_SUFFIX, LINKER_SCRIPTS_PATH
 
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m4 -mthumb")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os")
@@ -10,28 +10,28 @@ add_compile_options("-DCORE_M4")
 
 file(GLOB_RECURSE SOURCES ./src/*.c ../shared/*.c)
 
-add_executable(${BLOBNAME} ${SOURCES} ../main/main.o)
+add_executable(${FLASH_APP_NAME} ${SOURCES} ../${MAIN_APP_NAME}/${MAIN_APP_NAME}${IMAGE_OBJECT_SUFFIX})
 
-set_source_files_properties(../main/main.o PROPERTIES GENERATED TRUE)
+set_source_files_properties(../${MAIN_APP_NAME}/${MAIN_APP_NAME}${IMAGE_OBJECT_SUFFIX} PROPERTIES GENERATED TRUE)
 
-target_include_directories (${BLOBNAME} PRIVATE "./src")
+target_include_directories (${FLASH_APP_NAME} PRIVATE "./src")
 
-target_link_options(${BLOBNAME} PUBLIC -Wl,-Map,output.map -Wl,--gc-sections)
-target_link_directories(${BLOBNAME} PUBLIC ${CMAKE_SOURCE_DIR}/firmware/ld)
+target_link_options(${FLASH_APP_NAME} PUBLIC -Wl,-Map,output.map -Wl,--gc-sections)
+target_link_directories(${FLASH_APP_NAME} PUBLIC ${LINKER_SCRIPTS_PATH})
 
-set_target_properties(${BLOBNAME} PROPERTIES LINKER_LANGUAGE C)
-set_target_properties(${BLOBNAME} PROPERTIES LINK_FLAGS "-Tsysex-isp.ld")
-set_target_properties(${BLOBNAME} PROPERTIES COMPILE_FLAGS "${CMAKE_C_FLAGS}")
+set_target_properties(${FLASH_APP_NAME} PROPERTIES LINKER_LANGUAGE C)
+set_target_properties(${FLASH_APP_NAME} PROPERTIES LINK_FLAGS "-T${FLASH_APP_NAME}${LINKER_SCRIPT_SUFFIX}")
+set_target_properties(${FLASH_APP_NAME} PROPERTIES COMPILE_FLAGS "${CMAKE_C_FLAGS}")
 
-add_custom_command(OUTPUT ${BLOBNAME}.syx
-    DEPENDS ${BLOBNAME}
-    DEPENDS main.image
+add_custom_command(OUTPUT ${FLASH_APP_NAME}${SYSEX_SUFFIX}
+    DEPENDS ${FLASH_APP_NAME}
+    DEPENDS ${MAIN_APP_NAME}${IMAGE_OBJECT_TARGET_SUFFIX}
     DEPENDS mk-sysex
-    COMMAND arm-none-eabi-objcopy --verbose --strip-all -O binary --remove-section=.ARM.attributes --remove-section=".bss*" --remove-section=".noinit*" ${BLOBNAME} ${BLOBNAME}.bin
-    COMMAND mk-sysex ${BLOBNAME}.bin ${BLOBNAME}.syx
+    COMMAND arm-none-eabi-objcopy --verbose --strip-all -O binary --remove-section=.ARM.attributes --remove-section=".bss*" --remove-section=".noinit*" ${FLASH_APP_NAME} ${FLASH_APP_NAME}${IMAGE_SUFFIX}
+    COMMAND mk-sysex ${FLASH_APP_NAME}${IMAGE_SUFFIX} ${FLASH_APP_NAME}${SYSEX_SUFFIX}
 )
 
-add_custom_target(${BLOBNAME}.image ALL
-    COMMENT "Create ${BLOBNAME}.syx"
-    DEPENDS ${BLOBNAME}.syx
+add_custom_target(${FLASH_APP_NAME}${SYSEX_TARGET_SUFFIX} ALL
+    COMMENT "Creating MIDI SysEx from image of '${FLASH_APP_NAME}': DONE"
+    DEPENDS ${FLASH_APP_NAME}${SYSEX_SUFFIX}
 )

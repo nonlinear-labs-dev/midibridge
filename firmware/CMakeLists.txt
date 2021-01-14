@@ -1,6 +1,8 @@
-cmake_minimum_required(VERSION 3.0)
+# input variables: FIRMWARE_DIRNAME
 
-project (midibridge NONE)
+cmake_minimum_required(VERSION 3.2)
+
+project (midibridge-hardware NONE)
 
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR ARM)
@@ -40,5 +42,17 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
 include_directories ("./src/shared")
 
-add_subdirectory (src/main)
-add_subdirectory (src/sysex-isp)
+#variables passed to the lower scripts
+set(MAIN_APP_NAME               application)
+set(FLASH_APP_NAME              in-app-flasher)
+set(LINKER_SCRIPT_SUFFIX        .ld)
+set(IMAGE_SUFFIX                .image)
+set(IMAGE_TARGET_SUFFIX         _image)
+set(IMAGE_OBJECT_SUFFIX         _image.o)
+set(IMAGE_OBJECT_TARGET_SUFFIX  _image_object)
+set(SYSEX_SUFFIX                .syx)
+set(SYSEX_TARGET_SUFFIX         _sysex)
+set(LINKER_SCRIPTS_PATH          ${CMAKE_SOURCE_DIR}/${FIRMWARE_DIRNAME}/ld)
+
+add_subdirectory (src/${MAIN_APP_NAME})
+add_subdirectory (src/${FLASH_APP_NAME})
