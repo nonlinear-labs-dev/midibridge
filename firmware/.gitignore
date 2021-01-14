@@ -1,24 +1,19 @@
 # Blacklist files/folders in same directory as the .gitignore file
 
 # Whitelist some files
-!src/main/.cproject
-!src/main/.project
-!src/co-proc/.cproject
-!src/co-proc/.project
-!src/sysex-isp/.cproject
-!src/sysex-isp/.project
+!src/application/.cproject
+!src/application/.project
+!src/in-app-flasher/.cproject
+!src/in-app-flasher/.project
 
 # Blacklist files/folders
 .metadata/
-src/main/.settings
-src/main/Release
-src/main/Debug
-src/co-proc/.settings
-src/co-proc/Release
-src/co-proc/Debug
-src/sysex-isp/.settings
-src/sysex-isp/Release
-src/sysex-isp/Debug
+src/application/.settings
+src/application/Release
+src/application/Debug
+src/in-app-flasher/.settings
+src/in-app-flasher/Release
+src/in-app-flasher/Debug
 *.launch
 
 # Whitelist our folders we want to sync

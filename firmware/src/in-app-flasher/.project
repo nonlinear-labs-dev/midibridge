@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>sysex-isp</name>
+	<name>in-app-flasher</name>
 	<comment></comment>
 	<projects>
-		<project>main</project>
+		<project>application</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

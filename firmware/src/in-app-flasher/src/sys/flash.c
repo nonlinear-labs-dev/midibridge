@@ -92,13 +92,16 @@ int flashMemory(uint32_t const *buf, uint32_t len, uint8_t bank)
     len++;
   len >>= 2;
 
+  if (len == 0)
+    return 1;
+
   bank               = (bank != 0);
   uint32_t  sector   = 0;
   uint32_t *flashAdr = flashBankAdr[bank];
 
   // erase flash (40kBytes, 5 sectors 8kBytes each)
   if (!(iapPrepSectorsForWrite(0, 4, bank) && iapEraseSectors(0, 4, bank)))
-    return 1;
+    return 2;
 
   while (len > 0)
   {
@@ -116,12 +119,12 @@ int flashMemory(uint32_t const *buf, uint32_t len, uint8_t bank)
     // prepare affected sector. We need to increment the sector number after every
     // second 4kB block of data as a sector is 8kB, the right-shift affords this
     if (!iapPrepSectorsForWrite(sector >> 1, sector >> 1, bank))
-      return 2;
+      return 3;
     sector++;
 
     // flash chunk
     if (!iapCopyRamToFlash(flashBuffer, flashAdr, 4096))
-      return 3;
+      return 4;
 
     flashAdr += 1024;  // next 4kB start adr
     len -= toCopy;

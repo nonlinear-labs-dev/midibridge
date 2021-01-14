@@ -19,14 +19,18 @@ static void LedB(uint8_t const rgb)
   LED_BLUE1  = !(rgb & 0b100);
 }
 
-// these symbols are provided by the dependent project "main",
-// which first makes a binary file (*.bin) from it's compile
-// and then a linkable object file (*.o) from that which creates
-// these symbols
-extern uint8_t _binary_main_bin_start;
-extern uint8_t _binary_main_bin_end;
-extern uint8_t _binary_main_bin_size;
+// these three symbols are provided by the dependent project "application",
+// which first makes a binary image file (*.image) from it's compile
+// and then a linkable object file (*_image.object) from that, which creates
+// these automatic symbols.
+// The word part between "_binary_" and "_start"(etc) is the name of the converted image
+// and dots in the filename (.) are replaced with underscores (_)
+extern uint8_t _binary_application_image_start;
+extern uint8_t _binary_application_image_end;
+extern uint8_t _binary_application_image_size;
 
+// references needed to clear the zero-initialized data section,
+// created by custom linker script
 extern uint32_t *__bss_section_start;
 extern uint32_t  __bss_section_size;
 
@@ -36,6 +40,8 @@ static const char LOCAL_VERSION_STRING[] = "\n\nNLL MIDI Host-to-Host Bridge In-
 
 volatile char dummy;
 
+
+// must be public so compiler doesn't optimize it away
 void dummyFunction(const char *string)
 {
   while (*string)
@@ -56,7 +62,7 @@ __attribute__((section(".codeentry"))) int main(void)
 
   __disable_irq();
   asm volatile("ldr sp, [%0]" ::"r"(&stack));  // setup our stack
-  dummyFunction(LOCAL_VERSION_STRING);
+  dummyFunction(LOCAL_VERSION_STRING);         // reference the string so compiler doesn't optimize it away
 
   // zero the zero-initialized data section (.bss)
   uint32_t  count = __bss_section_size >> 2;  // get word count
@@ -66,11 +72,12 @@ __attribute__((section(".codeentry"))) int main(void)
 
   LedA(0b001);
   LedB(0b000);
-  CPU_ConfigureClocks();
+  CPU_ConfigureClocks();  // go full speed, to make the buffer copying as fast as possible for fail-safeness
 
   LedA(0b010);
   FLASH_Init();
-  int fail = flashMemory((uint32_t *) &_binary_main_bin_start, (uint32_t) &_binary_main_bin_size, 0);  // 36k to flash A
+  // flash into bank A
+  int fail = flashMemory((uint32_t *) &_binary_application_image_start, (uint32_t) &_binary_application_image_size, 0);
 
 #define MAX (3000000ul);
   int toggle = 1;
@@ -92,5 +99,5 @@ __attribute__((section(".codeentry"))) int main(void)
       LedB(0b000);
     }
   }
-  // !! main must NOT return as we've overwritten the code as well as the caller's stack !!
+  // !! main must NEVER return as we've overwritten the caller's code and stack !!
 }

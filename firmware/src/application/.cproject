@@ -15,11 +15,11 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactExtension="axf" artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe" cleanCommand="rm -rf" description="Release" errorParsers="org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser" id="com.crt.advproject.config.exe.debug.91278126.1571853288.1234652918" name="Release" parent="com.crt.advproject.config.exe.debug" postannouncebuildStep="Performing post-build steps" postbuildStep="arm-none-eabi-gcc --version ; arm-none-eabi-size &quot;${BuildArtifactFileName}&quot; ; arm-none-eabi-objcopy -v -O binary &quot;${BuildArtifactFileName}&quot; &quot;${BuildArtifactFileBaseName}.bin&quot; ; arm-none-eabi-objcopy -v -I binary -O elf32-littlearm -B armv7e-m &quot;${BuildArtifactFileBaseName}.bin&quot; &quot;${BuildArtifactFileBaseName}.o&quot; ; # checksum -p ${TargetChip} -d &quot;${BuildArtifactFileBaseName}.bin&quot;" preannouncebuildStep="" prebuildStep="">
+				<configuration artifactExtension="axf" artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe" cleanCommand="rm -rf" description="Release" errorParsers="org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser" id="com.crt.advproject.config.exe.debug.91278126.1571853288.1234652918" name="Release" parent="com.crt.advproject.config.exe.debug" postannouncebuildStep="Performing post-build steps" postbuildStep="arm-none-eabi-gcc --version ; arm-none-eabi-size &quot;${BuildArtifactFileName}&quot; ; arm-none-eabi-objcopy -v -O binary &quot;${BuildArtifactFileName}&quot; &quot;${BuildArtifactFileBaseName}.image&quot; ; arm-none-eabi-objcopy -v -I binary -O elf32-littlearm -B armv7e-m &quot;${BuildArtifactFileBaseName}.image&quot; &quot;${BuildArtifactFileBaseName}_image.object&quot; ;" preannouncebuildStep="" prebuildStep="">
 					<folderInfo id="com.crt.advproject.config.exe.debug.91278126.1571853288.1234652918." name="/" resourcePath="">
 						<toolChain errorParsers="" id="com.crt.advproject.toolchain.exe.debug.333488150" name="NXP MCU Tools" superClass="com.crt.advproject.toolchain.exe.debug">
 							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF;org.eclipse.cdt.core.GNU_ELF" id="com.crt.advproject.platform.exe.debug.545000377" name="ARM-based MCU (Debug)" superClass="com.crt.advproject.platform.exe.debug"/>
-							<builder buildPath="${workspace_loc:/main}/Debug" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="com.crt.advproject.builder.exe.debug.1647667309" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="com.crt.advproject.builder.exe.debug">
+							<builder buildPath="${workspace_loc:/application}/Debug" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="com.crt.advproject.builder.exe.debug.1647667309" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="com.crt.advproject.builder.exe.debug">
 								<outputEntries>
 									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name="Debug"/>
 									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name="Release"/>
@@ -53,7 +53,6 @@
 							<tool command="arm-none-eabi-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GASErrorParser" id="com.crt.advproject.gas.exe.debug.1902805764" name="MCU Assembler" superClass="com.crt.advproject.gas.exe.debug">
 								<option id="com.crt.advproject.gas.arch.697230701" name="Architecture" superClass="com.crt.advproject.gas.arch" value="com.crt.advproject.gas.target.cm4" valueType="enumerated"/>
 								<option id="com.crt.advproject.gas.thumb.598022889" name="Thumb mode" superClass="com.crt.advproject.gas.thumb" value="true" valueType="boolean"/>
-								<option id="gnu.both.asm.option.flags.crt.851869179" name="Assembler flags" superClass="gnu.both.asm.option.flags.crt" value="-c -x assembler-with-cpp -DDEBUG -D__CODE_RED -DCORE_M4 -D__LPC43XX__ -D__MULTICORE_MASTER" valueType="string"/>
 								<option id="com.crt.advproject.gas.hdrlib.1737222635" name="Library headers" superClass="com.crt.advproject.gas.hdrlib" value="com.crt.advproject.gas.hdrlib.none" valueType="enumerated"/>
 								<option id="com.crt.advproject.gas.specs.131357950" name="Specs" superClass="com.crt.advproject.gas.specs" value="com.crt.advproject.gas.specs.none" valueType="enumerated"/>
 								<option id="com.crt.advproject.gas.fpu.2108973984" name="Floating point" superClass="com.crt.advproject.gas.fpu" value="com.crt.advproject.gas.fpu.fpv4.hard" valueType="enumerated"/>
@@ -62,11 +61,9 @@
 							</tool>
 							<tool id="com.crt.advproject.link.cpp.exe.debug.868098789" name="MCU C++ Linker" superClass="com.crt.advproject.link.cpp.exe.debug"/>
 							<tool command="arm-none-eabi-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="com.crt.advproject.link.exe.debug.1167022555" name="MCU Linker" superClass="com.crt.advproject.link.exe.debug">
-								<option id="com.crt.advproject.link.gcc.multicore.master.1632352937" name="Multicore master" superClass="com.crt.advproject.link.gcc.multicore.master" value="M0APP,${workspace_loc:/co-proc/${ConfigName}/co-proc.axf.o},RAM2,,false;" valueType="string"/>
-								<option id="com.crt.advproject.link.gcc.multicore.master.userobjs.1153043235" name="Slave Objects (not visible)" superClass="com.crt.advproject.link.gcc.multicore.master.userobjs" valueType="userObjs"/>
 								<option id="com.crt.advproject.link.arch.1177867480" name="Architecture" superClass="com.crt.advproject.link.arch" value="com.crt.advproject.link.target.cm4" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.thumb.1887801752" name="Thumb mode" superClass="com.crt.advproject.link.thumb" value="true" valueType="boolean"/>
-								<option id="com.crt.advproject.link.script.1528650216" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;main.ld&quot;" valueType="string"/>
+								<option id="com.crt.advproject.link.script.1528650216" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;application.ld&quot;" valueType="string"/>
 								<option id="com.crt.advproject.link.manage.128491229" name="Manage linker script" superClass="com.crt.advproject.link.manage" value="false" valueType="boolean"/>
 								<option id="gnu.c.link.option.nostdlibs.878761408" name="No startup or default libs (-nostdlib)" superClass="gnu.c.link.option.nostdlibs" value="true" valueType="boolean"/>
 								<option id="gnu.c.link.option.other.635225948" name="Other options (-Xlinker [option])" superClass="gnu.c.link.option.other" valueType="stringList">
@@ -77,7 +74,6 @@
 								<option id="com.crt.advproject.link.gcc.hdrlib.593035845" name="Library" superClass="com.crt.advproject.link.gcc.hdrlib" value="com.crt.advproject.gcc.link.hdrlib.none" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.fpu.1099674636" name="Floating point" superClass="com.crt.advproject.link.fpu" value="com.crt.advproject.link.fpu.fpv4.hard" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.crpenable.2119384164" name="Enable Code Read Protection" superClass="com.crt.advproject.link.crpenable"/>
-								<option id="com.crt.advproject.link.gcc.multicore.slave.43387853" name="Multicore configuration" superClass="com.crt.advproject.link.gcc.multicore.slave" value="Master" valueType="string"/>
 								<option id="com.crt.advproject.link.toram.661387424" name="Link application to RAM" superClass="com.crt.advproject.link.toram" value="false" valueType="boolean"/>
 								<option id="com.crt.advproject.link.scriptdir.652426610" name="Script path" superClass="com.crt.advproject.link.scriptdir" value="&quot;../../../ld&quot;" valueType="string"/>
 								<option id="com.crt.advproject.link.gcc.lto.357750111" name="Enable Link-time optimization (-flto)" superClass="com.crt.advproject.link.gcc.lto" value="false" valueType="boolean"/>
@@ -113,7 +109,7 @@
 					<folderInfo id="com.crt.advproject.config.exe.debug.91278126.1571853288.1234652918.1923934774." name="/" resourcePath="">
 						<toolChain errorParsers="" id="com.crt.advproject.toolchain.exe.debug.416470251" name="NXP MCU Tools" superClass="com.crt.advproject.toolchain.exe.debug">
 							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF;org.eclipse.cdt.core.GNU_ELF" id="com.crt.advproject.platform.exe.debug.2051422823" name="ARM-based MCU (Debug)" superClass="com.crt.advproject.platform.exe.debug"/>
-							<builder buildPath="${workspace_loc:/main}/Debug" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="com.crt.advproject.builder.exe.debug.58339098" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="com.crt.advproject.builder.exe.debug">
+							<builder buildPath="${workspace_loc:/application}/Debug" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="com.crt.advproject.builder.exe.debug.58339098" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="com.crt.advproject.builder.exe.debug">
 								<outputEntries>
 									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name="Debug"/>
 									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name="Release"/>
@@ -146,7 +142,7 @@
 							<tool command="arm-none-eabi-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GASErrorParser" id="com.crt.advproject.gas.exe.debug.723568193" name="MCU Assembler" superClass="com.crt.advproject.gas.exe.debug">
 								<option id="com.crt.advproject.gas.arch.970980533" name="Architecture" superClass="com.crt.advproject.gas.arch" value="com.crt.advproject.gas.target.cm4" valueType="enumerated"/>
 								<option id="com.crt.advproject.gas.thumb.739707138" name="Thumb mode" superClass="com.crt.advproject.gas.thumb" value="true" valueType="boolean"/>
-								<option id="gnu.both.asm.option.flags.crt.327266176" name="Assembler flags" superClass="gnu.both.asm.option.flags.crt" value="-c -x assembler-with-cpp -DDEBUG -D__CODE_RED -DCORE_M4 -D__LPC43XX__ -D__MULTICORE_MASTER" valueType="string"/>
+								<option id="gnu.both.asm.option.flags.crt.327266176" name="Assembler flags" superClass="gnu.both.asm.option.flags.crt" value="-c -x assembler-with-cpp -DDEBUG -D__CODE_RED -DCORE_M4 -D__LPC43XX__" valueType="string"/>
 								<option id="com.crt.advproject.gas.hdrlib.20003393" name="Library headers" superClass="com.crt.advproject.gas.hdrlib" value="com.crt.advproject.gas.hdrlib.none" valueType="enumerated"/>
 								<option id="com.crt.advproject.gas.specs.1735074583" name="Specs" superClass="com.crt.advproject.gas.specs" value="com.crt.advproject.gas.specs.none" valueType="enumerated"/>
 								<option id="com.crt.advproject.gas.fpu.1550573263" name="Floating point" superClass="com.crt.advproject.gas.fpu" value="com.crt.advproject.gas.fpu.fpv4.hard" valueType="enumerated"/>
@@ -155,11 +151,9 @@
 							</tool>
 							<tool id="com.crt.advproject.link.cpp.exe.debug.552045594" name="MCU C++ Linker" superClass="com.crt.advproject.link.cpp.exe.debug"/>
 							<tool command="arm-none-eabi-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="com.crt.advproject.link.exe.debug.981743815" name="MCU Linker" superClass="com.crt.advproject.link.exe.debug">
-								<option id="com.crt.advproject.link.gcc.multicore.master.33726597" name="Multicore master" superClass="com.crt.advproject.link.gcc.multicore.master" value="M0APP,${workspace_loc:/co-proc/${ConfigName}/co-proc.axf.o},RAM2,,false;" valueType="string"/>
-								<option id="com.crt.advproject.link.gcc.multicore.master.userobjs.105131270" name="Slave Objects (not visible)" superClass="com.crt.advproject.link.gcc.multicore.master.userobjs" valueType="userObjs"/>
 								<option id="com.crt.advproject.link.arch.540595748" name="Architecture" superClass="com.crt.advproject.link.arch" value="com.crt.advproject.link.target.cm4" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.thumb.688448334" name="Thumb mode" superClass="com.crt.advproject.link.thumb" value="true" valueType="boolean"/>
-								<option id="com.crt.advproject.link.script.824496378" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;main.ld&quot;" valueType="string"/>
+								<option id="com.crt.advproject.link.script.824496378" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;application.ld&quot;" valueType="string"/>
 								<option id="com.crt.advproject.link.manage.557542724" name="Manage linker script" superClass="com.crt.advproject.link.manage" value="false" valueType="boolean"/>
 								<option id="gnu.c.link.option.nostdlibs.1888462163" name="No startup or default libs (-nostdlib)" superClass="gnu.c.link.option.nostdlibs" value="true" valueType="boolean"/>
 								<option id="gnu.c.link.option.other.720296235" name="Other options (-Xlinker [option])" superClass="gnu.c.link.option.other" valueType="stringList">
@@ -170,7 +164,6 @@
 								<option id="com.crt.advproject.link.gcc.hdrlib.1332215293" name="Library" superClass="com.crt.advproject.link.gcc.hdrlib" value="com.crt.advproject.gcc.link.hdrlib.none" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.fpu.1537601875" name="Floating point" superClass="com.crt.advproject.link.fpu" value="com.crt.advproject.link.fpu.fpv4.hard" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.crpenable.649434064" name="Enable Code Read Protection" superClass="com.crt.advproject.link.crpenable"/>
-								<option id="com.crt.advproject.link.gcc.multicore.slave.503612240" name="Multicore configuration" superClass="com.crt.advproject.link.gcc.multicore.slave" value="Master" valueType="string"/>
 								<option id="com.crt.advproject.link.toram.252942844" name="Link application to RAM" superClass="com.crt.advproject.link.toram" value="false" valueType="boolean"/>
 								<option id="com.crt.advproject.link.scriptdir.604383790" name="Script path" superClass="com.crt.advproject.link.scriptdir" value="&quot;../../../ld&quot;" valueType="string"/>
 								<option id="com.crt.advproject.link.gcc.lto.1227459455" name="Enable Link-time optimization (-flto)" superClass="com.crt.advproject.link.gcc.lto" value="false" valueType="boolean"/>
@@ -190,7 +183,7 @@
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-		<project id="main.com.crt.advproject.projecttype.exe.1705148486" name="Executable" projectType="com.crt.advproject.projecttype.exe"/>
+		<project id="application.com.crt.advproject.projecttype.exe.1705148486" name="Executable" projectType="com.crt.advproject.projecttype.exe"/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="com.crt.config">
@@ -290,10 +283,10 @@
 	</storageModule>
 	<storageModule moduleId="refreshScope" versionNumber="2">
 		<configuration configurationName="Release">
-			<resource resourceType="PROJECT" workspacePath="/main"/>
+			<resource resourceType="PROJECT" workspacePath="/application"/>
 		</configuration>
 		<configuration configurationName="Debug">
-			<resource resourceType="PROJECT" workspacePath="/main"/>
+			<resource resourceType="PROJECT" workspacePath="/application"/>
 		</configuration>
 	</storageModule>
 </cproject>

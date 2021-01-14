@@ -8,8 +8,8 @@
 #include "midi/MIDI_statemonitor.h"
 #include "devctl/devctl.h"
 
-#define PACKET_TIMEOUT       (8000ul)  // in 125us units, 8000 *0.125ms = 1000ms  until a packet is aborted
-#define PACKET_TIMEOUT_SHORT (800ul)   // in 125us units, 800  *0.125ms = 100ms    until the next packet is aborted
+#define PACKET_TIMEOUT       (8000ul)  // in 125us units, 8000 *0.125ms = 1000ms  until a first packet is aborted
+#define PACKET_TIMEOUT_SHORT (800ul)   // in 125us units, 800  *0.125ms = 100ms   until the next packet is aborted
 
 typedef enum
 {
@@ -46,6 +46,7 @@ static PacketTransfer_t packetTransfer[2] =  // port number is referring to inco
       { .first = 1, .portNo = 1, .outgoingPortNo = 0, .outgoingTransfer = &packetTransfer[0] },
     };
 
+// macros for providing a C++ - style "this" pointer
 #define OP         PacketTransfer_t *const t
 #define mkOP(name) PacketTransfer_t *const name
 
@@ -102,7 +103,7 @@ static inline void processTransfers(OP)
 
   if (t->state >= WAIT_FOR_XMIT_READY)
   {
-    if (now - t->packetTime > t->packetTimeout)  // packet could not be submitted
+    if ((now - t->packetTime) > t->packetTimeout)  // packet could not be submitted
     {
       t->dropped = 1;
       USB_MIDI_KillTransmit(t->outgoingPortNo);

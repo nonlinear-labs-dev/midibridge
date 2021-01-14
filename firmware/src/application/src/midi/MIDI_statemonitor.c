@@ -17,7 +17,8 @@
 #define BLINK_TIME_ON_TIME            msToTicks(300)   // active portion of blink time
 #define BLINK_TIME_OFF_TIME           (BLINK_TIME - BLINK_TIME_ON_TIME)
 
-#define PWM_RELOAD (32)  // PWM ratio for dimmed LED
+// PWM ratio for full dimmed LED, do NOT change without checking effect in doDisplay()
+#define PWM_RELOAD (32)
 
 typedef enum
 {
@@ -42,17 +43,17 @@ typedef enum
 
 static struct
 {
-  int powered;
-  int online;
+  int powered;  // flag: port is powered
+  int online;   // flag: port is ready to use
 
-  unsigned  packetTime;
-  Latency_t packetLatency;
-  int       dropped;
+  unsigned  packetTime;     // packet transmit running time
+  Latency_t packetLatency;  // current latency range
+  int       dropped;        // flag:packed had to be dropped
 
-  unsigned packetDisplayTimer;
-  unsigned lateDisplayTimer;
-  unsigned staleDisplayTimer;
-  unsigned droppedDisplayTimer;
+  unsigned packetDisplayTimer;   // packet display runtime
+  unsigned lateDisplayTimer;     // hold time for "late packets" display
+  unsigned staleDisplayTimer;    // hold time for "stale packets" display
+  unsigned droppedDisplayTimer;  // hold time for "dropped packets" display
 } state[2];
 
 static struct
@@ -72,7 +73,7 @@ static inline void setLED(uint8_t const port, LedColor_t const color, Brightness
 static inline void doTimers(void);
 static inline void setLedDirect(uint8_t const port, LedColor_t const color);
 
-// may be called from within interrupt callbacks !
+// may/will be called from within interrupt callbacks !
 void SMON_monitorEvent(uint8_t const port, MonitorEvent_t const event)
 {
   switch (event)
@@ -160,6 +161,7 @@ static inline void setupDisplay(uint8_t const port)
     if (state[port].packetTime)  // packet is running
     {
       state[port].packetDisplayTimer = NORMAL_HOT_INDICATOR_TIMEOUT;
+      // set up current latency range and start their display timers
       if (state[port].packetTime < LATE_TIME)
         state[port].packetLatency = REALTIME;
       else if (state[port].packetTime < STALE_TIME)
@@ -176,6 +178,8 @@ static inline void setupDisplay(uint8_t const port)
       switch (state[port].packetLatency)
       {
         case REALTIME:
+          // during physical run time of the packet, display color
+          // is governed by the strongest current history display state.
           if (state[port].droppedDisplayTimer)
             setLED(port, COLOR_MAGENTA, BRIGHT, SOLID);
           else if (state[port].staleDisplayTimer)
@@ -186,6 +190,8 @@ static inline void setupDisplay(uint8_t const port)
             setLED(port, COLOR_CYAN, BRIGHT, SOLID);
           break;
 
+        // the following cases are seldom met in normal operation, so they force
+        // display color unconditionally
         case LATE:
           setLED(port, COLOR_YELLOW, BRIGHT, SOLID);
           break;
@@ -198,8 +204,10 @@ static inline void setupDisplay(uint8_t const port)
           break;
       }
     }
-    else  // no packet running
+    else
     {
+      // no packet running, so first display the lengthened tail of the packet state,
+      // then later the packet state history
       if (state[port].dropped)
       {
         state[port].dropped             = 0;

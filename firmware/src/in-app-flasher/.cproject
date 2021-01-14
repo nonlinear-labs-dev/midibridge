@@ -15,18 +15,17 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactExtension="axf" artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe" cleanCommand="rm -rf" description="Release build" errorParsers="org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser" id="com.crt.advproject.config.exe.release.1730810670" name="Release" parent="com.crt.advproject.config.exe.release" postannouncebuildStep="Performing post-build steps" postbuildStep="arm-none-eabi-gcc --version ; arm-none-eabi-size &quot;${BuildArtifactFileName}&quot; ; arm-none-eabi-objcopy -v -O binary &quot;${BuildArtifactFileName}&quot; &quot;${BuildArtifactFileBaseName}.bin&quot; ; # checksum -p ${TargetChip} -d &quot;${BuildArtifactFileBaseName}.bin&quot;" preannouncebuildStep="" prebuildStep="">
+				<configuration artifactExtension="axf" artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe" cleanCommand="rm -rf" description="Release build" errorParsers="org.eclipse.cdt.core.CWDLocator;org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GASErrorParser" id="com.crt.advproject.config.exe.release.1730810670" name="Release" parent="com.crt.advproject.config.exe.release" postannouncebuildStep="Performing post-build steps" postbuildStep="arm-none-eabi-gcc --version ; arm-none-eabi-size &quot;${BuildArtifactFileName}&quot; ; arm-none-eabi-objcopy -v -O binary &quot;${BuildArtifactFileName}&quot; &quot;${BuildArtifactFileBaseName}.image&quot; ;" preannouncebuildStep="" prebuildStep="">
 					<folderInfo id="com.crt.advproject.config.exe.release.1730810670." name="/" resourcePath="">
 						<toolChain errorParsers="" id="com.crt.advproject.toolchain.exe.release.1940784319" name="NXP MCU Tools" superClass="com.crt.advproject.toolchain.exe.release">
 							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF;org.eclipse.cdt.core.GNU_ELF" id="com.crt.advproject.platform.exe.release.892999549" name="ARM-based MCU (Release)" superClass="com.crt.advproject.platform.exe.release"/>
-							<builder buildPath="${workspace_loc:/sysex-isp}/Release" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="com.crt.advproject.builder.exe.release.141009154" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="com.crt.advproject.builder.exe.release"/>
+							<builder buildPath="${workspace_loc:/in-app-flasher}/Release" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.CWDLocator" id="com.crt.advproject.builder.exe.release.141009154" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="com.crt.advproject.builder.exe.release"/>
 							<tool id="com.crt.advproject.cpp.exe.release.1502461470" name="MCU C++ Compiler" superClass="com.crt.advproject.cpp.exe.release"/>
 							<tool command="arm-none-eabi-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="com.crt.advproject.gcc.exe.release.327232189" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.release">
 								<option id="com.crt.advproject.gcc.arch.1995925338" name="Architecture" superClass="com.crt.advproject.gcc.arch" value="com.crt.advproject.gcc.target.cm4" valueType="enumerated"/>
 								<option id="com.crt.advproject.gcc.thumb.1567627419" name="Thumb mode" superClass="com.crt.advproject.gcc.thumb" value="true" valueType="boolean"/>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.959014583" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="CORE_M4"/>
-									<listOptionValue builtIn="false" value="LPCXPRESSO"/>
 								</option>
 								<option id="gnu.c.compiler.option.misc.other.231291054" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0 -fno-builtin -ffunction-sections -fdata-sections" valueType="string"/>
 								<option id="gnu.c.compiler.option.optimization.flags.1041809624" name="Other optimization flags" superClass="gnu.c.compiler.option.optimization.flags" value="-fno-common" valueType="string"/>
@@ -44,7 +43,6 @@
 							<tool command="arm-none-eabi-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GASErrorParser" id="com.crt.advproject.gas.exe.release.966090074" name="MCU Assembler" superClass="com.crt.advproject.gas.exe.release">
 								<option id="com.crt.advproject.gas.arch.1580920437" name="Architecture" superClass="com.crt.advproject.gas.arch" value="com.crt.advproject.gas.target.cm4" valueType="enumerated"/>
 								<option id="com.crt.advproject.gas.thumb.1034528532" name="Thumb mode" superClass="com.crt.advproject.gas.thumb" value="true" valueType="boolean"/>
-								<option id="gnu.both.asm.option.flags.crt.2056889527" name="Assembler flags" superClass="gnu.both.asm.option.flags.crt" value="-c -x assembler-with-cpp -D__MULTICORE_NONE -DNDEBUG -D__CODE_RED" valueType="string"/>
 								<option id="com.crt.advproject.gas.hdrlib.654256660" name="Library headers" superClass="com.crt.advproject.gas.hdrlib" value="com.crt.advproject.gas.hdrlib.none" valueType="enumerated"/>
 								<option id="com.crt.advproject.gas.specs.1088707304" name="Specs" superClass="com.crt.advproject.gas.specs" value="com.crt.advproject.gas.specs.none" valueType="enumerated"/>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.2045859232" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
@@ -52,11 +50,9 @@
 							</tool>
 							<tool id="com.crt.advproject.link.cpp.exe.release.1274421858" name="MCU C++ Linker" superClass="com.crt.advproject.link.cpp.exe.release"/>
 							<tool command="arm-none-eabi-gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="com.crt.advproject.link.exe.release.1157413390" name="MCU Linker" superClass="com.crt.advproject.link.exe.release">
-								<option id="com.crt.advproject.link.gcc.multicore.master.621954570" name="Multicore master" superClass="com.crt.advproject.link.gcc.multicore.master"/>
-								<option id="com.crt.advproject.link.gcc.multicore.master.userobjs.2008529786" name="Slave Objects (not visible)" superClass="com.crt.advproject.link.gcc.multicore.master.userobjs" valueType="userObjs"/>
 								<option id="com.crt.advproject.link.arch.2143087391" name="Architecture" superClass="com.crt.advproject.link.arch" value="com.crt.advproject.link.target.cm4" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.thumb.1085776119" name="Thumb mode" superClass="com.crt.advproject.link.thumb" value="true" valueType="boolean"/>
-								<option id="com.crt.advproject.link.script.469972293" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;sysex-isp.ld&quot;" valueType="string"/>
+								<option id="com.crt.advproject.link.script.469972293" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;in-app-flasher.ld&quot;" valueType="string"/>
 								<option id="com.crt.advproject.link.manage.1594613541" name="Manage linker script" superClass="com.crt.advproject.link.manage" value="false" valueType="boolean"/>
 								<option id="gnu.c.link.option.nostdlibs.945975957" name="No startup or default libs (-nostdlib)" superClass="gnu.c.link.option.nostdlibs" value="true" valueType="boolean"/>
 								<option id="gnu.c.link.option.other.934851959" name="Other options (-Xlinker [option])" superClass="gnu.c.link.option.other" valueType="stringList">
@@ -67,10 +63,9 @@
 								<option id="com.crt.advproject.link.gcc.hdrlib.1378082599" name="Library" superClass="com.crt.advproject.link.gcc.hdrlib" value="com.crt.advproject.gcc.link.hdrlib.none" valueType="enumerated"/>
 								<option id="gnu.c.link.option.nostart.840319911" name="Do not use standard start files (-nostartfiles)" superClass="gnu.c.link.option.nostart" value="true" valueType="boolean"/>
 								<option id="gnu.c.link.option.nodeflibs.323449130" name="Do not use default libraries (-nodefaultlibs)" superClass="gnu.c.link.option.nodeflibs" value="true" valueType="boolean"/>
-								<option id="com.crt.advproject.link.gcc.multicore.slave.1558326497" name="Multicore configuration" superClass="com.crt.advproject.link.gcc.multicore.slave"/>
 								<option id="com.crt.advproject.link.scriptdir.1332162010" name="Script path" superClass="com.crt.advproject.link.scriptdir" value="&quot;../../../ld&quot;" valueType="string"/>
 								<option id="gnu.c.link.option.userobjs.2029655814" name="Other objects" superClass="gnu.c.link.option.userobjs" valueType="userObjs">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/main/Release/main.o}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/application/Release/application_image.object}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1869685579" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
@@ -85,7 +80,7 @@
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-		<project id="sysex-isp.com.crt.advproject.projecttype.exe.637454818" name="Executable" projectType="com.crt.advproject.projecttype.exe"/>
+		<project id="in-app-flasher.com.crt.advproject.projecttype.exe.637454818" name="Executable" projectType="com.crt.advproject.projecttype.exe"/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="com.crt.config">
@@ -170,10 +165,10 @@
 	</storageModule>
 	<storageModule moduleId="refreshScope" versionNumber="2">
 		<configuration configurationName="Release">
-			<resource resourceType="PROJECT" workspacePath="/sysex-isp"/>
+			<resource resourceType="PROJECT" workspacePath="/in-app-flasher"/>
 		</configuration>
 		<configuration configurationName="Debug">
-			<resource resourceType="PROJECT" workspacePath="/sysex-isp"/>
+			<resource resourceType="PROJECT" workspacePath="/in-app-flasher"/>
 		</configuration>
 	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
