@@ -20,10 +20,107 @@ static void error(char const *const format, ...)
 static void usage(void)
 {
   fflush(stderr);
-  puts("Usage: mk-sysex <in-file> <out-file>");
+  puts("Usage: mk-sysex <in-file> [<out-file>]");
   puts(" Generate a sysex (.syx) binary file from a binary input file,");
   puts(" to be used to upload the binary to the NLL Midi Bridge.");
   puts(" Payload data is encoded with the NLL 8-to-7 bit scheme.");
+  puts(" If <out-file> is not given a name for it will be generated");
+  puts(" as 'nlmb-fw-update-VX.YZ.syx', where X.YZ is the version ID");
+  puts(" found in the input file");
+}
+
+static char fwVersion[] = "X.YZ";
+
+void scanVersionString(uint8_t const byte)
+{
+  static int step = 0;
+  switch (step)
+  {
+    case 0:
+      if (byte == 'V')
+        step++;
+      else
+        step = 0;
+      break;
+
+    case 1:
+      if (byte == 'E')
+        step++;
+      else
+        step = 0;
+      break;
+
+    case 2:
+      if (byte == 'R')
+        step++;
+      else
+        step = 0;
+      break;
+
+    case 3:
+      if (byte == 'S')
+        step++;
+      else
+        step = 0;
+      break;
+
+    case 4:
+      if (byte == 'I')
+        step++;
+      else
+        step = 0;
+      break;
+
+    case 5:
+      if (byte == 'O')
+        step++;
+      else
+        step = 0;
+      break;
+
+    case 6:
+      if (byte == 'N')
+        step++;
+      else
+        step = 0;
+      break;
+
+    case 7:
+      if (byte == ':')
+        step++;
+      else
+        step = 0;
+      break;
+
+    case 8:
+      if (byte == ' ')
+        step++;
+      else
+        step = 0;
+      break;
+
+    case 9:
+      fwVersion[0] = byte;
+      step++;
+      break;
+
+    case 10:
+      step++;
+      break;
+
+    case 11:
+      fwVersion[2] = byte;
+      step++;
+      break;
+
+    case 12:
+      fwVersion[3] = byte;
+      step++;
+      break;
+
+    default:
+      break;
+  }
 }
 
 #pragma pack(push, 1)
@@ -60,6 +157,7 @@ static void encodeAndWrite(uint8_t *buffer, size_t len, FILE *outfile)
       fillCount          = 0;
     }
     uint8_t byte = *(buffer++);
+    scanVersionString(byte);
     if (byte & 0x80)
       encodeData.topBits |= topBitsMask;  // add in top bit for this byte
     topBitsMask >>= 1;
@@ -81,12 +179,20 @@ static void encodeAndWrite(uint8_t *buffer, size_t len, FILE *outfile)
 
 int main(int argc, char *argv[])
 {
-  if (argc != 3)
+  if (argc != 2 && argc != 3)
   {
     error("Wrong number of arguments!");
     usage();
     return 3;
   }
+
+  char autoName[] = "nlmb-fw-update-VX.YZ.syx";
+
+  char *outFileName;
+  if (argc == 3)
+    outFileName = argv[2];
+  else
+    outFileName = "__temp__";
 
   FILE *inFile;
   FILE *outFile;
@@ -95,7 +201,7 @@ int main(int argc, char *argv[])
     error("Could not open input file %s", argv[1]);
     return 3;
   }
-  if (NULL == (outFile = fopen(argv[2], "wb")))
+  if (NULL == (outFile = fopen(outFileName, "wb")))
   {
     error("Could not open output file %s", argv[2]);
     return 3;
@@ -104,14 +210,14 @@ int main(int argc, char *argv[])
 #define BLOCKSIZE (4096)
   uint8_t inBuffer[BLOCKSIZE];  // read blocks of data from file
 
-  puts("writing device control header...");
+  puts(" writing device control header...");
   if (1 != fwrite(NLMB_DevCtlSignature, sizeof(NLMB_DevCtlSignature), 1, outFile))
   {
     error("could not write to output file!");
     return 3;
   }
 
-  puts("encoding payload...");
+  puts(" encoding payload...");
   size_t bytes;
   size_t total = 0;
   while (BLOCKSIZE == (bytes = fread(inBuffer, 1, BLOCKSIZE, inFile)))
@@ -122,8 +228,9 @@ int main(int argc, char *argv[])
   encodeAndWrite(inBuffer, bytes, outFile);
   flushAnyRemaingBuffer(outFile);
   total += bytes;
-  printf("encoded %lu bytes of payload data.\n", total);
+  printf(" encoded %lu bytes of payload data.\n", total);
   fclose(inFile);
+  printf(" firmware version ID found: %s\n", fwVersion);
 
   uint8_t byte = 0xF7;
   if (1 != fwrite(&byte, sizeof(byte), 1, outFile))
@@ -132,6 +239,13 @@ int main(int argc, char *argv[])
     return 3;
   }
   fclose(outFile);
-  puts("done");
+
+  if (argc == 2)
+  {
+    autoName[16] = fwVersion[0];
+    autoName[18] = fwVersion[2];
+    autoName[19] = fwVersion[3];
+    rename(outFileName, autoName);
+  }
   return 0;
 }

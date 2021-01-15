@@ -5,7 +5,9 @@
 *******************************************************************************/
 #pragma once
 
-#define DELAY_ONE_CLK_CYCLE asm volatile("nop")  // 204 MHz => ~4.9ns
+// interrupts should be disabled when the delays need to have a bounded maximum
+// at 204 MHz => ~4.9ns
+#define DELAY_ONE_CLK_CYCLE asm volatile("nop")
 
 #define DELAY_TEN_CLK_CYCLES \
   DELAY_ONE_CLK_CYCLE;       \

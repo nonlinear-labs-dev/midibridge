@@ -39,7 +39,7 @@ static void execute(void)
   typedef void (*downloadCode_t)(void);
   downloadCode_t execStart;
 
-  execStart = (downloadCode_t)(CODE_START + 1);  // this must be code entry adr + 1 (ARM weirdness)
+  execStart = (downloadCode_t)(CODE_START + 1);  // call code entry adr + 1 (ARM weirdness)
   (*execStart)();
   error(COLOR_GREEN);
 }
@@ -59,7 +59,7 @@ int DEVCTL_isDeviceControlMsg(uint8_t** const pBuff, uint32_t* const pLen)
   return 0;
 }
 
-static inline void parseEncodedByte(uint8_t byte)
+static inline void parseAndDecode(uint8_t byte)
 {
   if (byte >= 0x80 && byte != 0xF7)  // illegal content will kill us
     error(COLOR_CYAN);
@@ -126,7 +126,7 @@ void DEVCTL_processMsg(uint8_t* buff, uint32_t len)
     }
 
     for (int i = 1; i <= payload; i++)
-      parseEncodedByte(buff[i]);
+      parseAndDecode(buff[i]);
 
     buff += 4;  // next raw USB packet
   }

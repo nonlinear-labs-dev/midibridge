@@ -1,4 +1,4 @@
-INCLUDE "main_MEM.ld"
+INCLUDE "application_MEM.ld"
 
 ENTRY(ResetISR)
 

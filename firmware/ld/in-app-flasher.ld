@@ -1,4 +1,4 @@
-INCLUDE "sysex-isp_MEM.ld"
+INCLUDE "in-app-flasher_MEM.ld"
 
 ENTRY(main)
 

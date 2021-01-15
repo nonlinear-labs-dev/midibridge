@@ -2,7 +2,8 @@
 #include "cmsis/lpc43xx_cgu.h"
 
 #define CLOCK_MULT (17)  // 17 * 12MHz --> 204MHz
-uint32_t M4coreClock;
+
+uint32_t M4coreClock = 96000000;  // cold start default
 
 static void Delay300(void);
 

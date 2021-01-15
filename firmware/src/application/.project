@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>main</name>
+	<name>application</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -41,11 +41,6 @@
 		</link>
 		<link>
 			<name>src/shared/io</name>
-			<type>2</type>
-			<locationURI>virtual:/virtual</locationURI>
-		</link>
-		<link>
-			<name>src/shared/ipc</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
@@ -123,16 +118,6 @@
 			<name>src/shared/io/pins.h</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/shared/io/pins.h</locationURI>
-		</link>
-		<link>
-			<name>src/shared/ipc/emphase_ipc.c</name>
-			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/shared/ipc/emphase_ipc.c</locationURI>
-		</link>
-		<link>
-			<name>src/shared/ipc/emphase_ipc.h</name>
-			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/shared/ipc/emphase_ipc.h</locationURI>
 		</link>
 		<link>
 			<name>src/shared/midi/nl_devctl_defs.h</name>

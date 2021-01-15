@@ -42,31 +42,11 @@ void CPU_ConfigureClocks(void)
   Delay300();  // delay at least 300 µs
 
   /* STEP 2: set cpu to a high frequency */
-  CGU_SetPLL1(17);    // set PLL1 to: f_osc x 17 = 204 MHz
+  CGU_SetPLL1(17);  // set PLL1 to: f_osc x 17 = 204 MHz
+  M4coreClock = 17ul * 12000000ul;
   Delay300();         // delay at least 300 µs
   CGU_UpdateClock();  // Update Clock Frequency
   Delay300();         // delay at least 300 µs
-  M4coreClock = 204000000ul;
-
-  /* connect USB0 to PLL0 which is set to 480 MHz */
-  CGU_EnableEntity(CGU_CLKSRC_PLL0, DISABLE);
-  Delay300();  // delay at least 300 µs
-  CGU_SetPLL0();
-  Delay300();  // delay at least 300 µs
-  CGU_EnableEntity(CGU_CLKSRC_PLL0, ENABLE);
-  Delay300();  // delay at least 300 µs
-  CGU_UpdateClock();
-  Delay300();  // delay at least 300 µs
-  CGU_EntityConnect(CGU_CLKSRC_PLL0, CGU_BASE_USB0);
-  Delay300();  // delay at least 300 µs
-
-  /* connect USB1 to PLL0 (480MHz) via /8 divider to get the required 60MHz */
-  /*                     IDIV=4          AUTOBLOCK   CLK_SEL=PLL0USB */
-  LPC_CGU->IDIVA_CTRL = ((4 - 1) << 2) | (1 << 11) | (0x07 << 24);  // setup IDIVA divider for PLL0USB/2
-  /*                     IDIV=2          AUTOBLOCK   CLK_SEL=IDIVA */
-  LPC_CGU->IDIVB_CTRL = ((2 - 1) << 2) | (1 << 11) | (0x0C << 24);  // setup IDIVB divider for IDIVA/2
-  /*                       AUTOBLOCK   CLK_SEL=IDIVB */
-  LPC_CGU->BASE_USB1_CLK = (1 << 11) | (0x0D << 24);  //  connect USB1_CLK to IDIVB
 }
 
 /******************************************************************************/
