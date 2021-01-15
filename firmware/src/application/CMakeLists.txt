@@ -24,7 +24,7 @@ set_target_properties(${MAIN_APP_NAME} PROPERTIES COMPILE_FLAGS "${CMAKE_C_FLAGS
 add_custom_command(OUTPUT ${MAIN_APP_NAME}${IMAGE_OBJECT_SUFFIX}
     DEPENDS ${MAIN_APP_NAME}
     COMMAND arm-none-eabi-objcopy --verbose --strip-all -O binary --remove-section=.ARM.attributes --remove-section=".bss*" --remove-section=".noinit*" ${MAIN_APP_NAME} ${MAIN_APP_NAME}${IMAGE_SUFFIX}
-    COMMAND arm-none-eabi-objcopy --verbose -I binary -O elf32-littlearm -B arm ${MAIN_APP_NAME}${IMAGE_SUFFIX} ${MAIN_APP_NAME}${IMAGE_OBJECT_SUFFIX}
+    COMMAND arm-none-eabi-objcopy --verbose -I binary -O elf32-littlearm -B arm --redefine-sym _binary_${MAIN_APP_NAME}${IMAGE_OBJCOPY_SUFFIX}_start=image_start --redefine-sym _binary_${MAIN_APP_NAME}${IMAGE_OBJCOPY_SUFFIX}_size=image_size ${MAIN_APP_NAME}${IMAGE_SUFFIX} ${MAIN_APP_NAME}${IMAGE_OBJECT_SUFFIX}
 )
 
 add_custom_target(${MAIN_APP_NAME}${IMAGE_OBJECT_TARGET_SUFFIX} ALL

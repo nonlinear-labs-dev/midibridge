@@ -17,4 +17,7 @@
   STR(SW_VERSION_MAJOR) \
   "." STR(SW_VERSION_MINOR_H) STR(SW_VERSION_MINOR_L)
 
+// !! SW_VERSION in below string must follow directly after the "VERSION: " part
+// as the firmware version scanner in the 'mk-sysex' tool depends on this!
+// Also, one can use  grep -oP '(?<=VERSION:).*' | sed 's: ::g'  to extract version number from image
 static const char VERSION_STRING[] = "\n\nNLL MIDI Host-to-Host Bridge, LPC4337, FIRMWARE VERSION: " SW_VERSION " \n\n\0\0\0";

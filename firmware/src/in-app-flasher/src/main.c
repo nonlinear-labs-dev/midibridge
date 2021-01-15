@@ -23,11 +23,8 @@ static void LedB(uint8_t const rgb)
 // which first makes a binary image file (*.image) from it's compile
 // and then a linkable object file (*_image.object) from that, which creates
 // these automatic symbols.
-// The word part between "_binary_" and "_start"(etc) is the name of the converted image
-// and dots in the filename (.) are replaced with underscores (_)
-extern uint8_t _binary_application_image_start;
-extern uint8_t _binary_application_image_end;
-extern uint8_t _binary_application_image_size;
+extern uint8_t image_start;
+extern uint8_t image_size;
 
 // references needed to clear the zero-initialized data section,
 // created by custom linker script
@@ -36,7 +33,8 @@ extern uint32_t  __bss_section_size;
 
 static uint32_t stack = 0x2000C000;  // stack at RamAHB16 (rwx) : ORIGIN = 0x20008000, LENGTH = 0x4000
 
-static const char LOCAL_VERSION_STRING[] = "\n\nNLL MIDI Host-to-Host Bridge In-Application Flasher, LPC4337, FIRMWARE VERSION: " SW_VERSION " \n\n\0\0\0";
+// note the use of lower-case for 'firmware version:' to avoid the firmware version scanner finds this instead of the ID in the main image
+static const char LOCAL_VERSION_STRING[] = "\n\nNLL MIDI Host-to-Host Bridge In-Application Flasher, LPC4337, firmware version: " SW_VERSION " \n\n\0\0\0";
 
 volatile char dummy;
 
@@ -77,7 +75,7 @@ __attribute__((section(".codeentry"))) int main(void)
   LedA(0b010);
   FLASH_Init();
   // flash into bank A
-  int fail = flashMemory((uint32_t *) &_binary_application_image_start, (uint32_t) &_binary_application_image_size, 0);
+  int fail = flashMemory((uint32_t *) &image_start, (uint32_t) &image_size, 0);
 
 #define MAX (3000000ul);
   int toggle = 1;
