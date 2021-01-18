@@ -106,12 +106,12 @@ static inline void closePort(void)
 
 static void sigHandler(int dummy)
 {
-  stop = TRUE;
+  stop  = TRUE;
+  dummy = dummy;
 }
 
 static uint64_t getTimeUSec(void)
 {
-  int             result;
   struct timespec tp;
 
   if (clock_gettime(CLOCK_MONOTONIC, &tp))
@@ -211,7 +211,7 @@ static inline void doSend(void)
 
     uint16_t *p   = (uint16_t *) &(dataBuf[24]);
     uint16_t  val = messageNo & 0xFFFF;
-    for (int i = 0; i < (size - 24) / 2; i++)
+    for (unsigned i = 0; i < (size - 24) / 2; i++)
       *p++ = val++;
 
     cursorUp(1);
@@ -267,7 +267,9 @@ static inline void doSend(void)
       messageTime += sleepTime;
     }
     if (written != total)
+    {
       ;  //printf("total of %d bytes transferred\n", total);
+    }
 
     messageTime = getTimeUSec() - messageTime;
 
@@ -307,7 +309,7 @@ static inline void doSend(void)
 
 uint64_t packetCntr;
 
-static inline BOOL examineContent(void const *const data, int const len)
+static inline BOOL examineContent(void const *const data, unsigned const len)
 {
   if (len < 24)
   {
@@ -339,9 +341,9 @@ static inline BOOL examineContent(void const *const data, int const len)
   printf("n:%lu, s:%5lu\n", packetNumber, packetSize);
   fflush(stdout);
 
-  uint16_t *p   = (uint16_t *) &(data[24]);
+  uint16_t *p   = ((uint16_t *) data) + 24;
   uint16_t  val = packetNumber & 0xFFFF;
-  for (int i = 0; i < (packetSize - 24) / 2; i++)
+  for (unsigned i = 0; i < (packetSize - 24) / 2; i++)
   {
     if (*p++ != val++)
     {
@@ -386,10 +388,10 @@ static inline BOOL parseReceivedByte(uint8_t byte)
 {
   static int step;
 
-  static uint8_t buf[PARSER_BUFFER_SIZE];
-  static int     bufPos = 0;
-  static uint8_t topBitsMask;
-  static uint8_t topBits;
+  static uint8_t  buf[PARSER_BUFFER_SIZE];
+  static unsigned bufPos = 0;
+  static uint8_t  topBitsMask;
+  static uint8_t  topBits;
 
   switch (step)
   {

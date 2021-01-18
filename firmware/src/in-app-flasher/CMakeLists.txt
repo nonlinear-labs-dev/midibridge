@@ -28,10 +28,11 @@ add_custom_command(OUTPUT ${FLASH_APP_NAME}${SYSEX_SUFFIX}
     DEPENDS ${MAIN_APP_NAME}${IMAGE_OBJECT_TARGET_SUFFIX}
     DEPENDS mk-sysex
     COMMAND arm-none-eabi-objcopy --verbose --strip-all -O binary --remove-section=.ARM.attributes --remove-section=".bss*" --remove-section=".noinit*" ${FLASH_APP_NAME} ${FLASH_APP_NAME}${IMAGE_SUFFIX}
-    # create SysEx file with the original name as that is the dependency use
-    COMMAND mk-sysex ${FLASH_APP_NAME}${IMAGE_SUFFIX} ${FLASH_APP_NAME}${SYSEX_SUFFIX} > /dev/null
-    # generate a second SysEx file with the standard name containing the extracted version info from the image
+    COMMAND rm -f *${SYSEX_SUFFIX}
+    # generate a SysEx file with the standard name containing the extracted version info from the image
     COMMAND mk-sysex ${FLASH_APP_NAME}${IMAGE_SUFFIX}
+    # copy the SysEx file to the original name as that is the dependency use
+    COMMAND cp *${SYSEX_SUFFIX} ${FLASH_APP_NAME}${SYSEX_SUFFIX}
     COMMAND echo created file duplicates: ; *${SYSEX_SUFFIX}
 )
 
