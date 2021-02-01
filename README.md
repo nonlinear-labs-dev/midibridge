@@ -3,7 +3,7 @@
  
 ## Project Organization
 * firmware/src contains two projects:
-  * the microcontroller main firmware application
+  * the microcontroller main firmware application. Compile-time #define switches: EVAL_BOARD --> GPIOs for LEDs etc as wired on the evalution board, SEPARATE_USB_DEVICE_IDS --> use different USB device IDs and strings for HS and FS port, for debug/test.
   * a uC firmware component 'in-app-flasher' to flash this firmware into the uC. The image of this flasher is uploaded into RAM via USB in form of a MIDI SysEx message and then executed. The image of the main firmware is contained (statically linked) within the in-app-flasher and hence the executed code can flash the new firmware.
 * tools/mk-sysex is a helper tool mainly for use at build-time to create the proper SysEx message from the binary image of the in-app-flasher.
 * tools/perf-test is a helper tool to check/test the midi-bridge for general operation, data integrity and latency.
