@@ -4,14 +4,20 @@
 *******************************************************************************/
 #pragma once
 
-// just set up the X.YZ style of version number vertically in below
-#define SW_VERSION_MAJOR 1
-// delimiter              .
-#define SW_VERSION_MINOR_H 0
-#define SW_VERSION_MINOR_L 2
+// version history :
+//  1.02 : initial (with separate USB IDs for HS and FS port)
+//  1.03 : unified USB IDs for HS and FS port for production version
 
-#define STR_IMPL_(x) #x            //stringify argument
-#define STR(x)       STR_IMPL_(x)  //indirection to expand argument macros
+// clang-format off
+// just set up the X.YZ style of version number vertically in below
+#define SW_VERSION_MAJOR    1
+// delimiter                .
+#define SW_VERSION_MINOR_H  0
+#define SW_VERSION_MINOR_L  3
+// clang-format on
+
+#define STR_IMPL_(x) #x            // stringify argument
+#define STR(x)       STR_IMPL_(x)  // indirection to expand argument macros
 
 #define SW_VERSION      \
   STR(SW_VERSION_MAJOR) \

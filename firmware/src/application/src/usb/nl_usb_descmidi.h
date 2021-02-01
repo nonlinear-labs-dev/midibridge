@@ -20,6 +20,7 @@
 
 /** Product Id */
 #ifdef SEPARATE_USB_DEVICE_IDS  // use different IDs and strings for HS and FS port, for debug/test
+#warning Compiling for different USB IDs and strings for HS and FS port, for debug/test
 #define PRODUCT_ID_HS 0x0002
 #define PRODUCT_ID_FS 0x0003
 #else

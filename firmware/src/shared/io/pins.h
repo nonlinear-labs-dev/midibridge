@@ -2,6 +2,10 @@
 
 #include "pin_setup.h"
 
+#ifdef EVAL_BOARD
+#warning Compiling for Evaluation Board specifics (GPIOs for LEDs etc)
+#endif
+
 // clang-format off
 
 //
