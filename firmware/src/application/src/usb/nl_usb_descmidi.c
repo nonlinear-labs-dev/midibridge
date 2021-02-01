@@ -22,7 +22,7 @@ const uint8_t USB0_MIDI_DeviceDescriptor[] = {
   0x00,                       /* bDeviceProtocol */
   USB_MAX_PACKET0,            /* bMaxPacketSize */
   WBVAL(VENDOR_ID),           /* idVendor */
-  WBVAL(PRODUCT_ID_0),        /* idProduct */
+  WBVAL(PRODUCT_ID_HS),       /* idProduct */
   WBVAL(BCD_DEVICE),          /* bcdDevice */
   0x01,                       /* iManufacturer */
   0x02,                       /* iProduct */
@@ -38,7 +38,7 @@ const uint8_t USB1_MIDI_DeviceDescriptor[] = {
   0x00,                       /* bDeviceProtocol */
   USB_MAX_PACKET0,            /* bMaxPacketSize */
   WBVAL(VENDOR_ID),           /* idVendor */
-  WBVAL(PRODUCT_ID_1),        /* idProduct */
+  WBVAL(PRODUCT_ID_FS),       /* idProduct */
   WBVAL(BCD_DEVICE),          /* bcdDevice */
   0x01,                       /* iManufacturer */
   0x02,                       /* iProduct */
@@ -296,7 +296,27 @@ const uint8_t USB0_MIDI_StringDescriptor[] = {
   'a', 0,
   'b', 0,
   's', 0,
-  /* Index 0x02: Product */
+/* Index 0x02: Product */
+#if PRODUCT_ID_HS == PRODUCT_ID_FS
+  (15 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
+  USB_STRING_DESCRIPTOR_TYPE, /* bDescriptorType */
+  'N', 0,
+  'L', 0,
+  'L', 0,
+  '-', 0,
+  'M', 0,
+  'I', 0,
+  'D', 0,
+  'I', 0,
+  '-', 0,
+  'B', 0,
+  'r', 0,
+  'i', 0,
+  'd', 0,
+  'g', 0,
+  'e', 0,
+  0, 0
+#else
   (14 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
   USB_STRING_DESCRIPTOR_TYPE, /* bDescriptorType */
   'N', 0,
@@ -314,8 +334,9 @@ const uint8_t USB0_MIDI_StringDescriptor[] = {
   'S', 0,
   ')', 0,
   0, 0
-
+#endif
 };
+
 const uint8_t USB1_MIDI_StringDescriptor[] = {
   /* Index 0x00: LANGID Codes */
   0x04,                           /* bLength */
@@ -337,7 +358,27 @@ const uint8_t USB1_MIDI_StringDescriptor[] = {
   'a', 0,
   'b', 0,
   's', 0,
-  /* Index 0x02: Product */
+/* Index 0x02: Product */
+#if PRODUCT_ID_HS == PRODUCT_ID_FS
+  (15 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
+  USB_STRING_DESCRIPTOR_TYPE, /* bDescriptorType */
+  'N', 0,
+  'L', 0,
+  'L', 0,
+  '-', 0,
+  'M', 0,
+  'I', 0,
+  'D', 0,
+  'I', 0,
+  '-', 0,
+  'B', 0,
+  'r', 0,
+  'i', 0,
+  'd', 0,
+  'g', 0,
+  'e', 0,
+  0, 0
+#else
   (14 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
   USB_STRING_DESCRIPTOR_TYPE, /* bDescriptorType */
   'N', 0,
@@ -355,6 +396,7 @@ const uint8_t USB1_MIDI_StringDescriptor[] = {
   'S', 0,
   ')', 0,
   0, 0
+#endif
 };
 
 /* USB Device Qualifier */

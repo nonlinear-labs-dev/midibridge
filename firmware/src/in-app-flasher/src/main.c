@@ -38,7 +38,6 @@ static const char LOCAL_VERSION_STRING[] = "\n\nNLL MIDI Host-to-Host Bridge In-
 
 volatile char dummy;
 
-
 // must be public so compiler doesn't optimize it away
 void dummyFunction(const char *string)
 {

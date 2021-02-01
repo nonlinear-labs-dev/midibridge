@@ -17,9 +17,24 @@
 #define BCDUSB_2_0 0x0200
 /** Vendor Id */
 #define VENDOR_ID 0x4E4C  // unofficial, "NL"
+
 /** Product Id */
-#define PRODUCT_ID_0 0x0031
-#define PRODUCT_ID_1 0x0032
+#ifdef SEPARATE_USB_DEVICE_IDS  // use different IDs and strings for HS and FS port, for debug/test
+#define PRODUCT_ID_HS 0x0002
+#define PRODUCT_ID_FS 0x0003
+#else
+#define PRODUCT_ID_HS 0x0001
+#define PRODUCT_ID_FS 0x0001
+#endif
+// Host id's the device by this number, no matter wrt FS or HS port used.
+// Therefore, use different IDs for FS and FS for debugging enumeration or for tests
+// with both ports attached to the same computer so that ports can be identified.
+// Different numbers will also create different ID strings in descmidi.c to help this identification.
+// Gotcha: Windows will not display any updated string for a device as long as the number
+// does not change as well. Remove the (stale) entries in the Device Manager, but to be sure
+// make individual HS and FS numbers both different from the shared number, like 2 and 3 !!
+// Any future NLL MIDI Products also must not have the same number(s).
+
 /** bcdDevice */
 #define BCD_DEVICE ((SW_VERSION_MAJOR << 8) | (SW_VERSION_MINOR_H << 4) | SW_VERSION_MINOR_L)
 /** @} */
