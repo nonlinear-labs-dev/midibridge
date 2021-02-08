@@ -1,5 +1,11 @@
 # input variables: MAIN_APP_NAME, FLASH_APP_NAME, LINKER_SCRIPT_SUFFIX, SYSEX_SUFFIX, SYSEX_TARGET_SUFFIX, IMAGE_OBJECT_SUFFIX, IMAGE_OBJECT_TARGET_SUFFIX, LINKER_SCRIPTS_PATH
 
+option(EVAL_BOARD "Evaluation Board specifics (GPIOs for LEDs etc)" OFF) #OFF by default
+if(EVAL_BOARD)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D EVAL_BOARD")
+endif(EVAL_BOARD)
+unset(EVAL_BOARD) # <---- this is the important!!
+
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m4 -mthumb")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Os")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fno-builtin -nodefaultlibs -nostdlib")
