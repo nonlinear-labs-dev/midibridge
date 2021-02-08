@@ -1509,16 +1509,14 @@ static inline void Handler(uint8_t const port)
 
     if (disr & USBSTS_SLI) /* Suspend */
     {
-      usb[port].activity                   = 1;
-      usb[port].connectionEstablished      = 0;
-      usb[port].gotConfigDescriptorRequest = 0;
+      usb[port].activity              = 1;
+      usb[port].connectionEstablished = 0;
     }
 
     if (disr & USBSTS_PCI) /* Resume */
     {
-      usb[port].activity                   = 1;
-      usb[port].connectionEstablished      = 1;
-      usb[port].gotConfigDescriptorRequest = 0;
+      usb[port].activity              = 1;
+      usb[port].connectionEstablished = 1;
       /* check if device is operating in HS mode or full speed */
       usb[port].DevStatusFS2HS = ((port == 0) && (usb[port].hardware->PORTSC1_D & (1 << 9)));  // only port USB0 can be high-speed
     }

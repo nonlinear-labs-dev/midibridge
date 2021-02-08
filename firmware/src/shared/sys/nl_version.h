@@ -7,13 +7,14 @@
 // version history :
 //  1.02 : initial (with separate USB IDs for HS and FS port)
 //  1.03 : unified USB IDs for HS and FS port for production version
+//  1.04 : bugfix : suspend/standby recovery
 
 // clang-format off
 // just set up the X.YZ style of version number vertically in below
 #define SW_VERSION_MAJOR    1
 // delimiter                .
 #define SW_VERSION_MINOR_H  0
-#define SW_VERSION_MINOR_L  3
+#define SW_VERSION_MINOR_L  4
 // clang-format on
 
 #define STR_IMPL_(x) #x            // stringify argument
