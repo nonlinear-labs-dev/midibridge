@@ -216,6 +216,12 @@ int main(int argc, char *argv[])
     error("could not write to output file!");
     return 3;
   }
+  uint16_t cmd = CMD_GET_AND_PROG;
+  if (1 != fwrite(&cmd, sizeof(cmd), 1, outFile))
+  {
+    error("could not write to output file!");
+    return 3;
+  }
 
   puts(" encoding payload...");
   size_t bytes;
