@@ -7,6 +7,7 @@
 #include "sys/ticker.h"
 #include "midi/MIDI_statemonitor.h"
 #include "devctl/devctl.h"
+#include "midi/nl_devctl_defs.h"
 
 #define PACKET_TIMEOUT       (8000ul)  // in 125us units, 8000 *0.125ms = 1000ms  until a first packet is aborted
 #define PACKET_TIMEOUT_SHORT (800ul)   // in 125us units, 800  *0.125ms = 100ms   until the next packet is aborted
@@ -219,7 +220,11 @@ static void Receive_IRQ_DevCtlCallback(uint8_t const port, uint8_t *buff, uint32
 
 static void Receive_IRQ_FirstCallback(uint8_t const port, uint8_t *buff, uint32_t len)
 {
-  if (DEVCTL_isDeviceControlMsg(&buff, &len))
+  USB_MIDI_Config(0, Receive_IRQ_Callback_0);
+  USB_MIDI_Config(1, Receive_IRQ_Callback_1);
+
+  uint16_t cmd = DEVCTL_isDeviceControlMsg(&buff, &len);
+  if (cmd == CMD_GET_AND_PROG)
   {
     USB_MIDI_DeInit(port ^ 1);
     USB_MIDI_Config(port ^ 1, NULL);
@@ -230,8 +235,12 @@ static void Receive_IRQ_FirstCallback(uint8_t const port, uint8_t *buff, uint32_
     return;
   }
 
-  USB_MIDI_Config(0, Receive_IRQ_Callback_0);
-  USB_MIDI_Config(1, Receive_IRQ_Callback_1);
+  if (cmd == CMD_LED_TEST)
+  {
+    SMON_monitorEvent(0, LED_TEST);
+    return;
+  }
+
   onReceive(&packetTransfer[port], buff, len);
 }
 

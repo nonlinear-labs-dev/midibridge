@@ -45,16 +45,21 @@ static void execute(void)
 }
 
 // ----------------------------------------------
-// return 1 when a sysex header is found in the buffer that is for us
-// Buff and Len are updated to point/count to the payload after the signature
-int DEVCTL_isDeviceControlMsg(uint8_t** const pBuff, uint32_t* const pLen)
+// return the command word  when a sysex header is found in the buffer that is for us,
+// else return 0
+// Buff and Len are updated to point/count to the payload after the signature/cmd
+uint16_t DEVCTL_isDeviceControlMsg(uint8_t** const pBuff, uint32_t* const pLen)
 {
   uint32_t const ID_SIZE = sizeof NLMB_DevCtlSignature_RAW;
   if ((*pLen >= ID_SIZE) && memcmp(*pBuff, NLMB_DevCtlSignature_RAW, ID_SIZE, ID_SIZE))
   {
     *pBuff += ID_SIZE;
     *pLen -= ID_SIZE;
-    return 1;
+
+    uint16_t cmd = *((uint16_t*) *pBuff);
+    *pBuff += 2;
+    *pLen -= 2;
+    return cmd;
   }
   return 0;
 }

@@ -60,6 +60,7 @@ __attribute__((section(".codeentry"))) int main(void)
   __disable_irq();
   asm volatile("ldr sp, [%0]" ::"r"(&stack));  // setup our stack
   dummyFunction(LOCAL_VERSION_STRING);         // reference the string so compiler doesn't optimize it away
+  PINS_Init();
 
   // zero the zero-initialized data section (.bss)
   uint32_t  count = __bss_section_size >> 2;  // get word count
