@@ -4,7 +4,7 @@
 #include "sys/delays.h"
 
 #ifdef EVAL_BOARD
-#warning Compiling for Evaluation Board specifics (GPIOs for LEDs etc)
+#warning Forcing Compile for Evaluation Board specifics (GPIOs for LEDs etc)
 #endif
 
 static uint8_t isEvalPCB;
@@ -109,17 +109,17 @@ static inline void debugPinsInit(void)
 static inline int      pinUSB0_VBUS(void)
 {
   if (isEvalPCB)
-    return LED_DBG2 = GPIO_Word(3, 0);
+    return GPIO_Word(3, 0);
   else
-    return LED_DBG2 = GPIO_Word(2, 0);
+    return GPIO_Word(2, 0);
 }
 
 static inline int pinUSB1_VBUS(void)
 {
   if (isEvalPCB)
-    return LED_DBG3 = GPIO_Word(3, 1);
+    return GPIO_Word(3, 1);
   else
-    return LED_DBG3 = GPIO_Word(3, 0);
+    return GPIO_Word(3, 0);
 }
 
 static void Delay300(void)
@@ -141,7 +141,9 @@ static inline void USBPinsInit(void)
   GPIO_DIR_IN(3, 1);
   SFSP(6, 2) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0;
 
-  // Find board type
+#ifndef EVAL_BOARD
+
+  // Find board type (unless overridden)
 
   // Step one, sense pin with pullups enabled
   // GPIO 2[0] is USB0 for production board
@@ -161,6 +163,12 @@ static inline void USBPinsInit(void)
   // set up follower/hysteresis behavior
   SFSP(4, 0) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPD + 0;
   Delay300();  // .3ms @204MHz
+
+#else
+
+  isEvalPCB = 1;
+
+#endif
 }
 
 // ------- Init all the pins -------
