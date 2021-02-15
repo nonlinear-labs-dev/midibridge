@@ -129,7 +129,7 @@ static inline void checkPortStatus(OP)
     return;
   }
   uint32_t online  = USB_MIDI_IsConfigured(t->portNo);
-  int      powered = (t->portNo == 0) ? pinUSB0_VBUS : pinUSB1_VBUS;
+  int      powered = (t->portNo == 0) ? pinUSB0_VBUS() : pinUSB1_VBUS();
 
   if (t->first)
   {
