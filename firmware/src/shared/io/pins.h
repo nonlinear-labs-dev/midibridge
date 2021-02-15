@@ -109,17 +109,17 @@ static inline void debugPinsInit(void)
 static inline int      pinUSB0_VBUS(void)
 {
   if (isEvalPCB)
-    return GPIO_Word(3, 0);
+    return LED_DBG2 = GPIO_Word(3, 0);
   else
-    return GPIO_Word(2, 0);
+    return LED_DBG2 = GPIO_Word(2, 0);
 }
 
 static inline int pinUSB1_VBUS(void)
 {
   if (isEvalPCB)
-    return GPIO_Word(3, 1);
+    return LED_DBG3 = GPIO_Word(3, 1);
   else
-    return GPIO_Word(3, 0);
+    return LED_DBG3 = GPIO_Word(3, 0);
 }
 
 static void Delay300(void)
@@ -156,7 +156,7 @@ static inline void USBPinsInit(void)
   uint32_t USB0_prod_PD = GPIO_Word(2, 0);
 
   if ((USB0_prod_PU != 0) && (USB0_prod_PD == 0))
-    LED_DBG2 = isEvalPCB = 1;  // pin followed pullup/-down, so it is floating actually
+    isEvalPCB = 1;  // pin followed pullup/-down, so it is floating actually
 
   // set up follower/hysteresis behavior
   SFSP(4, 0) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPD + 0;
