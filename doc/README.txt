@@ -3,6 +3,7 @@
 //  1.03 : unified USB IDs/names for HS and FS port for production version
 //  1.04 : bugfix : suspend/standby recovery
 //  1.05 : added LED test sysex command
+//  1.06 : added: Reset after successful flashing, detach all USB before flashing, auto-detect board type
 
 >>> Firmware Update Instructions <<<
 
@@ -15,7 +16,7 @@ try to deliver the MIDI data on the other port as in normal operation.
 
 3a. For Linux Users, using "amidi" (https://www.systutorials.com/docs/linux/man/1-amidi/)
   - find hardware port ID with "amidi -l", say it was hw:0,0,0 for example
-  - send SysEx with "amidi -p hw:0,0,0 -s nlmb-fw-update-VX.YZ(ProductionPCB).syx"  (X.YZ replaced with actual firmware number)
+  - send SysEx with "amidi -p hw:0,0,0 -s nlmb-fw-update-VX.YZ.syx"  (X.YZ replaced with actual firmware number)
 
 3b. For Windows/Mac users:
   - use an aplication like "MIDI Tools" (https://mountainutilities.eu/miditools)

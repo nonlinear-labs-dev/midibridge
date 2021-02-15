@@ -9,13 +9,14 @@
 //  1.03 : unified USB IDs/names for HS and FS port for production version
 //  1.04 : bugfix : suspend/standby recovery
 //  1.05 : added LED test sysex command
+//  1.06 : added: Reset after successful flashing, detach all USB before flashing, auto-detect board type
 
 // clang-format off
 // just set up the X.YZ style of version number vertically in below
 #define SW_VERSION_MAJOR    1
 // delimiter                .
 #define SW_VERSION_MINOR_H  0
-#define SW_VERSION_MINOR_L  5
+#define SW_VERSION_MINOR_L  6
 // clang-format on
 
 #define STR_IMPL_(x) #x            // stringify argument
