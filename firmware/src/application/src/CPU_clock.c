@@ -86,8 +86,8 @@ void CPU_ConfigureClocks(void)
 *******************************************************************************/
 static void Delay300(void)
 {
-  //  register uint32_t cnt = 60000;  // 60'000 * 5ns = 300us
-  register uint32_t cnt = 15000;  // 15'000 * 20ns = 300us
+  register uint32_t cnt = 60000;  // 60'000 * 5ns = 300us
+  /// register uint32_t cnt = 15000;  // 15'000 * 20ns = 300us
   while (--cnt)
     asm volatile("nop");  // 1 cycle = 5ns (@200mHz)
 }

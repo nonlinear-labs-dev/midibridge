@@ -129,7 +129,7 @@ static inline void checkPortStatus(OP)
     return;
   }
   uint32_t online  = USB_MIDI_IsConfigured(t->portNo);
-  int      powered = (t->portNo == 0) ? pinUSB0_VBUS : pinUSB1_VBUS;
+  int      powered = (t->portNo == 0) ? pinUSB0_VBUS() : pinUSB1_VBUS();
 
   if (t->first)
   {
@@ -230,7 +230,7 @@ static void Receive_IRQ_FirstCallback(uint8_t const port, uint8_t *buff, uint32_
     USB_MIDI_Config(port ^ 1, NULL);
     USB_MIDI_Config(port, Receive_IRQ_DevCtlCallback);
 
-    DEVCTL_init();
+    DEVCTL_init(port);
     DEVCTL_processMsg(buff, len);
     return;
   }
