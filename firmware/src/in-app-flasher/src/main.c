@@ -4,6 +4,7 @@
 #include "sys/flash.h"
 #include "CPU_clock.h"
 #include "sys/nl_version.h"
+#include "sys/nl_watchdog.h"
 
 static void LedA(uint8_t const rgb)
 {
@@ -76,6 +77,11 @@ __attribute__((section(".codeentry"))) int main(void)
   FLASH_Init();
   // flash into bank A
   int fail = flashMemory((uint32_t *) &image_start, (uint32_t) &image_size, 0);
+
+  if (!fail)
+  {
+    SYS_WatchDogInit(10ul * 1000ul);  // 10 seconds until reboot
+  }
 
 #define MAX (3000000ul);
   int toggle = 1;
