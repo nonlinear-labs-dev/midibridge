@@ -100,6 +100,9 @@ static inline void debugPinsInit(void)
 
 // --------------- USB VBUS-Monitors ----------------
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 static int pinUSB0_VBUS(void)
 {
 #ifdef EVAL_BOARD
@@ -118,6 +121,7 @@ static int pinUSB1_VBUS(void)
 #endif
 }
 
+#pragma GCC diagnostic pop
 
 static inline void USBPinsInit(void)
 {
