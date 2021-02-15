@@ -2,6 +2,7 @@
 #include "devctl/devctl.h"
 #include "drv/nl_leds.h"
 #include "sys/nl_stdlib.h"
+#include "usb/nl_usb_midi.h"
 
 static int memcmp(uint8_t const* const p, uint8_t const* const q, uint32_t const lenP, uint32_t const lenQ)
 {
@@ -34,8 +35,12 @@ static inline void error(LedColor_t const color)
 static uint8_t* code = (uint8_t*) CODE_START;
 #warning uploaded application must have its code entry point at 0x10080000 (==RamLoc40) !
 
+static uint8_t ourPort;
+
 static void execute(void)
 {
+  USB_MIDI_DeInit(ourPort);
+
   typedef void (*downloadCode_t)(void);
   downloadCode_t execStart;
 
@@ -92,8 +97,9 @@ static inline void parseAndDecode(uint8_t byte)
   }
 }
 
-void DEVCTL_init(void)
+void DEVCTL_init(uint8_t const port)
 {  // clear code buffer to have all data-segment uninitialized variables ("bss") zeroed
+  ourPort = port;
   memset(code, 0, CODE_SIZE);
 }
 
