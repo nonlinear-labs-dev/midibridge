@@ -456,15 +456,14 @@ void ResetISR(void)
 
 static inline void faultDisplay(void)
 {  // both LEDs white
-  LED_A    = 0;
-  LED_B    = 0;
-  LED_C    = 0;
-  LED_D    = 0;
-  LED_E    = 0;
-  LED_F    = 0;
-  LED_DBG1 = 1;
-  LED_DBG2 = 1;
-  LED_DBG3 = 1;
+  LED_RED0   = 0;
+  LED_RED1   = 0;
+  LED_GREEN0 = 0;
+  LED_GREEN1 = 0;
+  LED_BLUE0  = 0;
+  LED_BLUE1  = 0;
+  LED_DBG2   = 1;
+  LED_DBG3   = 1;
   __disable_irq();
   while (1)
   {
