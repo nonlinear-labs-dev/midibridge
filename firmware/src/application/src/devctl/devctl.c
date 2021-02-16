@@ -3,6 +3,7 @@
 #include "drv/nl_leds.h"
 #include "sys/nl_stdlib.h"
 #include "usb/nl_usb_midi.h"
+#include "midi/MIDI_statemonitor.h"
 
 static int memcmp(uint8_t const* const p, uint8_t const* const q, uint32_t const lenP, uint32_t const lenQ)
 {
@@ -105,6 +106,14 @@ void DEVCTL_init(uint8_t const port)
 
 void DEVCTL_processMsg(uint8_t* buff, uint32_t len)
 {
+  static int first = 1;
+  if (first)
+  {
+	first = 0;
+	LED_SetDirect(0, COLOR_YELLOW);
+	LED_SetDirect(1, COLOR_YELLOW);
+	SMON_monitorEvent(0, LED_DISABLE);
+  }
   while (len >= 4)  // more raw USB packets ?
   {
     len -= 4;

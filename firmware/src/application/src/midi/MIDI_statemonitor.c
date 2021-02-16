@@ -65,7 +65,8 @@ static struct
 
 static unsigned blinkCntr = BLINK_TIME;
 static unsigned pwmCntr   = PWM_RELOAD;
-static int      ledTest;  // flag: display LED test pattern instead of normal traffic
+static int      ledTest;     // flag: display LED test pattern instead of normal traffic
+static int      ledDisable;  // flag
 
 static inline void processLeds(void);
 static inline void setupDisplay(uint8_t const port);
@@ -79,9 +80,13 @@ void SMON_monitorEvent(uint8_t const port, MonitorEvent_t const event)
 {
   switch (event)
   {
-    case LED_TEST:
-      ledTest = 1;
-      break;
+	  case LED_TEST:
+		ledTest = 1;
+		break;
+
+	  case LED_DISABLE:
+		ledDisable = 1;
+		break;
 
     case UNPOWERED:
     case POWERED:
@@ -305,6 +310,8 @@ static inline void setLedDirect(uint8_t const port, LedColor_t const color)
 {
   if (showFirmwareVersion())
     return;
+  if (ledDisable)
+	return;
   LED_SetDirect(port, color);
 }
 

@@ -13,6 +13,7 @@ typedef enum
   PACKET_DELIVERED,
   PACKET_DROPPED,
   LED_TEST,
+  LED_DISABLE
 } MonitorEvent_t;
 
 void SMON_monitorEvent(uint8_t const port, MonitorEvent_t const event);

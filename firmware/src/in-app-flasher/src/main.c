@@ -69,11 +69,11 @@ __attribute__((section(".codeentry"))) int main(void)
   while (count--)
     *(p++) = 0;
 
-  LedA(0b001);
-  LedB(0b000);
+  LedA(0b001);  // A:RED
+  LedB(0b000);  // B:OFF
   CPU_ConfigureClocks();  // go full speed, to make the buffer copying as fast as possible for fail-safeness
 
-  LedA(0b010);
+  LedA(0b010);  // A:GREEN
   FLASH_Init();
   // flash into bank A
   int fail = flashMemory((uint32_t *) &image_start, (uint32_t) &image_size, 0);
@@ -94,7 +94,7 @@ __attribute__((section(".codeentry"))) int main(void)
     if (toggle)
     {                              // both green for success, else color-code the failed step number
       LedA(fail ? 0b001 : 0b010);  // green=success, red=fail
-      LedB(fail ? fail : 0b010);   // green on success, else step number (1:red/2:green/3:yellow)
+      LedB(fail ? fail : 0b010);   // green on success, else step number (1:red/2:green/3:yellow/4:blue)
     }
     else
     {
