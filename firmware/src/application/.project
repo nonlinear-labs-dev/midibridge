@@ -115,6 +115,11 @@
 			<locationURI>PARENT-1-PROJECT_LOC/shared/io/pin_setup.h</locationURI>
 		</link>
 		<link>
+			<name>src/shared/io/pins.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/io/pins.c</locationURI>
+		</link>
+		<link>
 			<name>src/shared/io/pins.h</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/shared/io/pins.h</locationURI>
