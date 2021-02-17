@@ -23,7 +23,7 @@ try to deliver the MIDI data on the other port as in normal operation.
   - load Firmware SysEx file
   - send to MIDI Bridge
   
-If the firmware update was successful, the MIDI Bridge will show that by both LEDs blinking fast in brigh green color.
+If the firmware update was successful, the MIDI Bridge will show that by both LEDs blinking fast in bright green color.
 If not, try again the full cycle (note: try using also the other port of the MIDI bridge).
 
 4. Fully disconnect the MIDI Bridge and reconnect. 
