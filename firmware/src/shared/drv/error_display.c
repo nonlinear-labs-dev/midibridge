@@ -40,7 +40,6 @@ void DisplayErrorAndHalt(ErrorEvent_t const err)
   int clear = 0;
   do
   {
-
     uint32_t cntr = MAX;
     while (cntr--)
       asm volatile("nop");
