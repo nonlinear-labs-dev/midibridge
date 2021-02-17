@@ -1,6 +1,6 @@
 #include "midi/nl_devctl_defs.h"
 #include "devctl/devctl.h"
-#include "drv/nl_leds.h"
+#include "drv/error_display.h"
 #include "sys/nl_stdlib.h"
 #include "usb/nl_usb_midi.h"
 #include "midi/MIDI_statemonitor.h"
@@ -13,22 +13,6 @@ static int memcmp(uint8_t const* const p, uint8_t const* const q, uint32_t const
     if (p[i] != q[i])
       return 0;
   return 1;
-}
-
-static inline void error(LedColor_t const color)
-{
-  int toggle = 0;
-  __disable_irq();
-  LED_SetDirect(0, COLOR_WHITE);
-  while (1)
-  {
-    toggle = !toggle;
-    LED_SetDirect(1, toggle ? color : COLOR_OFF);
-
-    uint32_t cntr = 3000000ul;
-    while (cntr--)
-      asm volatile("nop");
-  }
 }
 
 #define CODE_START (0x10080000)  // Pointer to RamLoc40 at 0x10080000,
@@ -47,7 +31,9 @@ static void execute(void)
 
   execStart = (downloadCode_t)(CODE_START + 1);  // call code entry adr + 1 (ARM weirdness)
   (*execStart)();
-  error(COLOR_GREEN);
+
+  // if the executed routine ever returns properly something has gone wrong completetly
+  DisplayErrorAndHalt(E_CODE_ERROR);
 }
 
 // ----------------------------------------------
@@ -72,11 +58,11 @@ uint16_t DEVCTL_isDeviceControlMsg(uint8_t** const pBuff, uint32_t* const pLen)
 
 static inline void parseAndDecode(uint8_t byte)
 {
-  if (byte >= 0x80 && byte != 0xF7)  // illegal content will kill us
-    error(COLOR_CYAN);
-
   if (byte == 0xF7)  // end of SysEx ?
     execute();       // will NOT return !
+
+  if (byte >= 0x80)  // illegal content will kill us
+    DisplayErrorAndHalt(E_SYSEX_DATA);
 
   static uint8_t topBitsMask;
   static uint8_t topBits;
@@ -93,7 +79,7 @@ static inline void parseAndDecode(uint8_t byte)
     topBitsMask >>= 1;
 
     if ((code - (uint8_t*) CODE_START) + 1 > CODE_SIZE)
-      error(COLOR_MAGENTA);  // buffer would overrun
+      DisplayErrorAndHalt(E_PROG_UPDATE_TOO_LARGE);  // buffer would overrun
     *(code++) = byte;
   }
 }
@@ -109,10 +95,9 @@ void DEVCTL_processMsg(uint8_t* buff, uint32_t len)
   static int first = 1;
   if (first)
   {
-	first = 0;
-	LED_SetDirect(0, COLOR_YELLOW);
-	LED_SetDirect(1, COLOR_YELLOW);
-	SMON_monitorEvent(0, LED_DISABLE);
+    first = 0;
+    SMON_monitorEvent(0, LED_DISABLE);
+    DisplayError(E_SYSEX_INCOMPLETE);
   }
   while (len >= 4)  // more raw USB packets ?
   {
@@ -127,7 +112,7 @@ void DEVCTL_processMsg(uint8_t* buff, uint32_t len)
       case 0x07:  // sysex type
         break;
       default:  // non-sysex will kill us
-        error(COLOR_CYAN);
+        DisplayErrorAndHalt(E_SYSEX_DATA);
     }
 
     // determine payload size of packet

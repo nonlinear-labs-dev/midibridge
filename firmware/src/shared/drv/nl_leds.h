@@ -1,6 +1,5 @@
 /******************************************************************************/
 /** @file		nl_leds.h
-    @brief	PWM LED low-level handling
 *******************************************************************************/
 #pragma once
 
@@ -9,14 +8,15 @@
 
 typedef enum
 {
-  COLOR_OFF     = 0b000,
-  COLOR_RED     = 0b001,
-  COLOR_GREEN   = 0b010,
-  COLOR_BLUE    = 0b100,
-  COLOR_YELLOW  = 0b011,
-  COLOR_CYAN    = 0b110,
-  COLOR_MAGENTA = 0b101,
-  COLOR_WHITE   = 0b111,
+  COLOR_OFF     = 0b0000,
+  COLOR_RED     = 0b0001,
+  COLOR_GREEN   = 0b0010,
+  COLOR_BLUE    = 0b0100,
+  COLOR_YELLOW  = 0b0011,
+  COLOR_CYAN    = 0b0110,
+  COLOR_MAGENTA = 0b0101,
+  COLOR_WHITE   = 0b0111,
+  LED_BLINKING  = 0b1000,
 } LedColor_t;
 
 static inline void LED_SetDirect(uint8_t const ledId, LedColor_t const rgb)

@@ -80,13 +80,13 @@ void SMON_monitorEvent(uint8_t const port, MonitorEvent_t const event)
 {
   switch (event)
   {
-	  case LED_TEST:
-		ledTest = 1;
-		break;
+    case LED_TEST:
+      ledTest = 1;
+      break;
 
-	  case LED_DISABLE:
-		ledDisable = 1;
-		break;
+    case LED_DISABLE:
+      ledDisable = 1;
+      break;
 
     case UNPOWERED:
     case POWERED:
@@ -311,7 +311,7 @@ static inline void setLedDirect(uint8_t const port, LedColor_t const color)
   if (showFirmwareVersion())
     return;
   if (ledDisable)
-	return;
+    return;
   LED_SetDirect(port, color);
 }
 
