@@ -1,24 +1,11 @@
 #include <stdint.h>
 #include "sys/nl_stdlib.h"
-#include "io/pins.h"
+#include "drv/error_display.h"
 #include "sys/flash.h"
 #include "CPU_clock.h"
+#include "io/pins.h"
 #include "sys/nl_version.h"
 #include "sys/nl_watchdog.h"
-
-static void LedA(uint8_t const rgb)
-{
-  LED_RED0   = !(rgb & 0b001);
-  LED_GREEN0 = !(rgb & 0b010);
-  LED_BLUE0  = !(rgb & 0b100);
-}
-
-static void LedB(uint8_t const rgb)
-{
-  LED_RED1   = !(rgb & 0b001);
-  LED_GREEN1 = !(rgb & 0b010);
-  LED_BLUE1  = !(rgb & 0b100);
-}
 
 // these three symbols are provided by the dependent project "application",
 // which first makes a binary image file (*.image) from it's compile
@@ -69,39 +56,28 @@ __attribute__((section(".codeentry"))) int main(void)
   while (count--)
     *(p++) = 0;
 
-  LedA(0b001);  // A:RED
-  LedB(0b000);  // B:OFF
   CPU_ConfigureClocks();  // go full speed, to make the buffer copying as fast as possible for fail-safeness
 
-  LedA(0b010);  // A:GREEN
   FLASH_Init();
   // flash into bank A
   int fail = flashMemory((uint32_t *) &image_start, (uint32_t) &image_size, 0);
 
-  if (!fail)
+  switch (fail)
   {
-    SYS_WatchDogInit(10ul * 1000ul);  // 10 seconds until reboot
+    case 0:
+      SYS_WatchDogInit(10ul * 1000ul);  // 10 seconds until reboot
+      DisplayErrorAndHalt(E_PROG_SUCCESS);
+    case 1:
+      DisplayErrorAndHalt(E_PROG_ZERO_DATA);
+    case 2:
+      DisplayErrorAndHalt(E_PROG_ERASE);
+    case 3:
+      DisplayErrorAndHalt(E_PROG_WRITEPREPARE);
+    case 4:
+      DisplayErrorAndHalt(E_PROG_WRITE);
+    default:
+      DisplayErrorAndHalt(E_CODE_ERROR);
   }
 
-#define MAX (3000000ul);
-  int toggle = 1;
-  while (1)
-  {
-    uint32_t cntr = MAX;
-    while (cntr--)
-      asm volatile("nop");
-    toggle = !toggle;
-    if (toggle)
-    {                              // both green for success, else color-code the failed step number
-      LedA(fail ? 0b001 : 0b010);  // green=success, red=fail
-      LedB(fail ? fail : 0b010);   // green on success, else step number (1:red/2:green/3:yellow/4:blue)
-    }
-    else
-    {
-      if (!fail)
-        LedA(0b000);
-      LedB(0b000);
-    }
-  }
   // !! main must NEVER return as we've overwritten the caller's code and stack !!
 }

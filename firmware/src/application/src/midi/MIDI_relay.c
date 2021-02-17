@@ -2,7 +2,7 @@
 #include "usb/nl_usb_midi.h"
 #include "usb/nl_usb_core.h"
 #include "io/pins.h"
-#include "drv/nl_leds.h"
+#include "drv/error_display.h"
 #include "sys/nl_stdlib.h"
 #include "sys/ticker.h"
 #include "midi/MIDI_statemonitor.h"
@@ -184,7 +184,7 @@ static inline void onReceive(OP, uint8_t *buff, uint32_t len)
     return;  // just in case incoming port went offline and we still got an interrupt
 
   if (len > 512)  // we should never ever receive a packet longer than the fixed(!) 512Bytes HS bulk size max
-    LED_SetDirectAndHalt(COLOR_RED);
+    DisplayErrorAndHalt(E_USB_PACKET_SIZE);
 
   if (!t->outgoingTransfer->online)  // outgoing port is offline, mark packet as dismissed
   {
@@ -193,7 +193,7 @@ static inline void onReceive(OP, uint8_t *buff, uint32_t len)
   }
 
   if (t->state != IDLE)  // we should never receive a packet when not IDLE
-    LED_SetDirectAndHalt(COLOR_MAGENTA);
+    DisplayErrorAndHalt(E_USB_UNEXPECTED_PACKET);
 
   // setup packet transfer data ...
   t->pData = buff;

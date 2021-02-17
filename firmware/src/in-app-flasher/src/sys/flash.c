@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include "cmsis/LPC43xx.h"
 #include "cmsis/lpc43xx_cgu.h"
-#include "io/pins.h"
 
 static uint32_t commandParam[5];
 static uint32_t statusResult[5];
@@ -12,20 +11,6 @@ static IAP_t iapEntry;
 
 #define IAP_CMD_SUCCESS (0)
 
-static inline void LedA(uint8_t const rgb)
-{
-  LED_RED0   = !(rgb & 0b001);
-  LED_GREEN0 = !(rgb & 0b010);
-  LED_BLUE0  = !(rgb & 0b100);
-}
-
-static inline void LedB(uint8_t const rgb)
-{
-  LED_RED1   = !(rgb & 0b001);
-  LED_GREEN1 = !(rgb & 0b010);
-  LED_BLUE1  = !(rgb & 0b100);
-}
-
 void FLASH_Init(void)
 {
   iapEntry = (IAP_t) IAP_LOCATION;
@@ -34,14 +19,12 @@ void FLASH_Init(void)
 
 static void iapInit(void)
 {
-  LedB(0b001);
   commandParam[0] = 49;  // CMD : Init
   iapEntry(commandParam, statusResult);
 }
 
 static int iapPrepSectorsForWrite(uint32_t const startSector, uint32_t const endSector, uint32_t const bank)
 {
-  LedB(0b010);
   commandParam[0] = 50;  // CMD : Prepare
   commandParam[1] = startSector;
   commandParam[2] = endSector;
@@ -52,7 +35,6 @@ static int iapPrepSectorsForWrite(uint32_t const startSector, uint32_t const end
 
 static int iapCopyRamToFlash(uint32_t const *const src, uint32_t const *const dest, uint32_t const bytes)
 {
-  LedB(0b100);
   commandParam[0] = 51;  // CMD : Write
   commandParam[1] = (uint32_t) dest;
   commandParam[2] = (uint32_t) src;
@@ -64,7 +46,6 @@ static int iapCopyRamToFlash(uint32_t const *const src, uint32_t const *const de
 
 static int iapEraseSectors(uint32_t const startSector, uint32_t const endSector, uint32_t const bank)
 {
-  LedB(0b011);
   commandParam[0] = 52;  // CMD : Erase
   commandParam[1] = startSector;
   commandParam[2] = endSector;
@@ -84,7 +65,6 @@ int flashMemory(uint32_t const *buf, uint32_t len, uint8_t bank)
   uint32_t               flashBuffer[1024];  // 4kB buffer, residing in the stack to save data segment space
 
   __disable_irq();
-  LedA(0b000);
   iapInit();
 
   // align len to a 4-byte multiple and make it a word count

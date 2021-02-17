@@ -36,6 +36,11 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>src/shared/drv</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
 			<name>src/shared/io</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>
@@ -89,6 +94,26 @@
 			<name>src/shared/cmsis/system_LPC43xx.h</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/shared/cmsis/system_LPC43xx.h</locationURI>
+		</link>
+		<link>
+			<name>src/shared/drv/error_display.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/drv/error_display.c</locationURI>
+		</link>
+		<link>
+			<name>src/shared/drv/error_display.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/drv/error_display.h</locationURI>
+		</link>
+		<link>
+			<name>src/shared/drv/nl_cgu.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/drv/nl_cgu.h</locationURI>
+		</link>
+		<link>
+			<name>src/shared/drv/nl_leds.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/drv/nl_leds.h</locationURI>
 		</link>
 		<link>
 			<name>src/shared/io/pin_setup.h</name>
