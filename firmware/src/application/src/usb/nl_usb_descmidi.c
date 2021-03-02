@@ -274,6 +274,7 @@ const uint8_t USB_MIDI_HSConfigDescriptor[] = {
   0
 };
 
+// clang format off
 /* USB String Descriptor (optional) */
 const uint8_t USB0_MIDI_StringDescriptor[] = {
   /* Index 0x00: LANGID Codes */
@@ -281,58 +282,22 @@ const uint8_t USB0_MIDI_StringDescriptor[] = {
   USB_STRING_DESCRIPTOR_TYPE,     /* bDescriptorType */
   WBVAL(0x0409), /* US English */ /* wLANGID */
   /* Index 0x01: Manufacturer */
-  (13 * 2 + 2),               /* bLength (13 Char + Type + length) */
+  (36 * 2 + 2),               /* bLength (36 x 16bitChar + Type + length) */
   USB_STRING_DESCRIPTOR_TYPE, /* bDescriptorType */
-  'N', 0,
-  'o', 0,
-  'n', 0,
-  'l', 0,
-  'i', 0,
-  'n', 0,
-  'e', 0,
-  'a', 0,
-  'r', 0,
-  'L', 0,
-  'a', 0,
-  'b', 0,
-  's', 0,
+  'N', 0, 'o', 0, 'n', 0, 'l', 0, 'i', 0, 'n', 0, 'e', 0, 'a', 0, 'r', 0,
+  'L', 0, 'a', 0, 'b', 0, 's', 0,
+  '(', 0, 'w', 0, 'w', 0, 'w', 0, '.', 0, 'n', 0, 'o', 0, 'n', 0, 'l', 0, 'i', 0, 'n', 0, 'e', 0, 'a', 0, 'r', 0,
+  '-', 0, 'l', 0, 'a', 0, 'b', 0, 's', 0, '.', 0, 'd', 0, 'e', 0, ')', 0,
 /* Index 0x02: Product */
 #if PRODUCT_ID_HS == PRODUCT_ID_FS
   (15 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
   USB_STRING_DESCRIPTOR_TYPE, /* bDescriptorType */
-  'N', 0,
-  'L', 0,
-  'L', 0,
-  '-', 0,
-  'M', 0,
-  'I', 0,
-  'D', 0,
-  'I', 0,
-  '-', 0,
-  'B', 0,
-  'r', 0,
-  'i', 0,
-  'd', 0,
-  'g', 0,
-  'e', 0,
+  'N', 0, 'L', 0, 'L', 0, '-', 0, 'M', 0, 'I', 0, 'D', 0, 'I', 0, '-', 0, 'B', 0, 'r', 0, 'i', 0, 'd', 0, 'g', 0, 'e', 0,
   0, 0
 #else
   (14 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
   USB_STRING_DESCRIPTOR_TYPE, /* bDescriptorType */
-  'N', 0,
-  'L', 0,
-  'L', 0,
-  '-', 0,
-  'B', 0,
-  'r', 0,
-  'i', 0,
-  'd', 0,
-  'g', 0,
-  'e', 0,
-  '(', 0,
-  'H', 0,
-  'S', 0,
-  ')', 0,
+  'N', 0, 'L', 0, 'L', 0, '-', 0, 'B', 0, 'r', 0, 'i', 0, 'd', 0, 'g', 0, 'e', 0, '(', 0, 'H', 0, 'S', 0, ')', 0,
   0, 0
 #endif
 };
@@ -343,61 +308,26 @@ const uint8_t USB1_MIDI_StringDescriptor[] = {
   USB_STRING_DESCRIPTOR_TYPE,     /* bDescriptorType */
   WBVAL(0x0409), /* US English */ /* wLANGID */
   /* Index 0x01: Manufacturer */
-  (13 * 2 + 2),               /* bLength (13 Char + Type + length) */
+  (36 * 2 + 2),               /* bLength (36 x 16bitChar + Type + length) */
   USB_STRING_DESCRIPTOR_TYPE, /* bDescriptorType */
-  'N', 0,
-  'o', 0,
-  'n', 0,
-  'l', 0,
-  'i', 0,
-  'n', 0,
-  'e', 0,
-  'a', 0,
-  'r', 0,
-  'L', 0,
-  'a', 0,
-  'b', 0,
-  's', 0,
+  'N', 0, 'o', 0, 'n', 0, 'l', 0, 'i', 0, 'n', 0, 'e', 0, 'a', 0, 'r', 0,
+  'L', 0, 'a', 0, 'b', 0, 's', 0,
+  '(', 0, 'w', 0, 'w', 0, 'w', 0, '.', 0, 'n', 0, 'o', 0, 'n', 0, 'l', 0, 'i', 0, 'n', 0, 'e', 0, 'a', 0, 'r', 0,
+  '-', 0, 'l', 0, 'a', 0, 'b', 0, 's', 0, '.', 0, 'd', 0, 'e', 0, ')', 0,
 /* Index 0x02: Product */
 #if PRODUCT_ID_HS == PRODUCT_ID_FS
   (15 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
   USB_STRING_DESCRIPTOR_TYPE, /* bDescriptorType */
-  'N', 0,
-  'L', 0,
-  'L', 0,
-  '-', 0,
-  'M', 0,
-  'I', 0,
-  'D', 0,
-  'I', 0,
-  '-', 0,
-  'B', 0,
-  'r', 0,
-  'i', 0,
-  'd', 0,
-  'g', 0,
-  'e', 0,
+  'N', 0, 'L', 0, 'L', 0, '-', 0, 'M', 0, 'I', 0, 'D', 0, 'I', 0, '-', 0, 'B', 0, 'r', 0, 'i', 0, 'd', 0, 'g', 0, 'e', 0,
   0, 0
 #else
   (14 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
   USB_STRING_DESCRIPTOR_TYPE, /* bDescriptorType */
-  'N', 0,
-  'L', 0,
-  'L', 0,
-  '-', 0,
-  'B', 0,
-  'r', 0,
-  'i', 0,
-  'd', 0,
-  'g', 0,
-  'e', 0,
-  '(', 0,
-  'F', 0,
-  'S', 0,
-  ')', 0,
+  'N', 0, 'L', 0, 'L', 0, '-', 0, 'B', 0, 'r', 0, 'i', 0, 'd', 0, 'g', 0, 'e', 0, '(', 0, 'F', 0, 'S', 0, ')', 0,
   0, 0
 #endif
 };
+// clang format on
 
 /* USB Device Qualifier */
 const uint8_t USB_MIDI_DeviceQualifier[] = {

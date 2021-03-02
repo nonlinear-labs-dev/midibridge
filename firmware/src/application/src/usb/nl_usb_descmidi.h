@@ -15,18 +15,11 @@
  */
 /** bcdUSB 2.0 */
 #define BCDUSB_2_0 0x0200
-/** Vendor Id */
-#define VENDOR_ID 0x4E4C  // unofficial, "NL"
 
-/** Product Id */
 #ifdef SEPARATE_USB_DEVICE_IDS  // use different IDs and strings for HS and FS port, for debug/test
 #warning Compiling for different USB IDs and strings for HS and FS port, for debug/test
-#define PRODUCT_ID_HS 0x0002
-#define PRODUCT_ID_FS 0x0003
-#else
-#define PRODUCT_ID_HS 0x0001
-#define PRODUCT_ID_FS 0x0001
-#endif
+
+/** Product Id */
 // Host id's the device by this number, no matter wrt FS or HS port used.
 // Therefore, use different IDs for FS and FS for debugging enumeration or for tests
 // with both ports attached to the same computer so that ports can be identified.
@@ -35,6 +28,21 @@
 // does not change as well. Remove the (stale) entries in the Device Manager, but to be sure
 // make individual HS and FS numbers both different from the shared number, like 2 and 3 !!
 // Any future NLL MIDI Products also must not have the same number(s).
+#define PRODUCT_ID_HS 0x0002
+#define PRODUCT_ID_FS 0x0003
+/** Vendor Id */
+#define VENDOR_ID 0x4E4C  // unofficial, "NL"
+
+#else                         // production setting
+
+/** Product Id */
+// see https://github.com/obdev/v-usb/blob/master/usbdrv/USB-IDs-for-free.txt
+#define PRODUCT_ID_HS 0x05E4  // PID for "textual identification"
+#define PRODUCT_ID_FS 0x05E4  // PID for "textual identification"
+/** Vendor Id */
+#define VENDOR_ID     0x16C0  // VID for class-compliant MIDI devices
+
+#endif
 
 /** bcdDevice */
 #define BCD_DEVICE ((SW_VERSION_MAJOR << 8) | (SW_VERSION_MINOR_H << 4) | SW_VERSION_MINOR_L)
