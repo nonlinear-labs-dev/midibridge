@@ -5,6 +5,7 @@
 // three-byte MIDI Manufacturer ID (inofficial, selected to avoid conflicts with taken IDs
 // see https://www.midi.org/specifications-old/item/manufacturer-id-numbers
 #define MMID0 (0)
+#warning TODO: use assigned number when they arrive
 #define MMID1 (0x4E)  // 'N', will likely become 0x20 or 0x21 with an official ID (0x20++ = european group)
 #define MMID2 (0x4C)  // 'L', will become the next free number assigned for us by midi.org
 
