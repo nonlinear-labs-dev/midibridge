@@ -9,8 +9,17 @@
 #include "devctl/devctl.h"
 #include "midi/nl_devctl_defs.h"
 
-#define PACKET_TIMEOUT       (8000ul)  // in 125us units, 8000 *0.125ms = 1000ms  until a first packet is aborted
-#define PACKET_TIMEOUT_SHORT (800ul)   // in 125us units, 800  *0.125ms = 100ms   until the next packet is aborted
+//timeout in usecs until a first packet is aborted
+#define PACKET_TIMEOUT_US (100ul * 1000ul)  // 100ms
+
+// timeout in usecs until the next packet is aborted
+#define PACKET_TIMEOUT_SHORT_US (5ul * 1000ul)  // 5ms
+
+// proccess time slice in us (125us, do not change)
+#define MR_TIMESLICE (125ul)
+
+#define PACKET_TIMEOUT       (PACKET_TIMEOUT_US / MR_TIMESLICE)        // in 125us units
+#define PACKET_TIMEOUT_SHORT (PACKET_TIMEOUT_SHORT_US / MR_TIMESLICE)  // in 125us units
 
 typedef enum
 {
