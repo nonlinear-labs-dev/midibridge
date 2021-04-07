@@ -4,7 +4,7 @@
 //  1.04 : bugfix : suspend/standby recovery
 //  1.05 : added LED test sysex command
 //  1.06 : added: Reset after successful flashing, detach all USB before flashing, auto-detect board type
-//  2.01 : use assigned ID's for USB and MIDI SysEx
+//  2.01 : use assigned ID's for USB and MIDI SysEx, shorter time-outs until stalling packets are dropped
 
 >>> Firmware Update Instructions <<<
 
@@ -29,7 +29,7 @@ If not, try again the full cycle (note: try using also the other port of the MID
 
 4. Fully disconnect the MIDI Bridge and reconnect. 
 
-5. Optional version Check:
+5. Optional Firmware Version Check:
 - Software like "MIDI Tools" must be restarted and then will show the new firmware version in the setup screen.
 - on Linux, use "usb-devices | grep -C 6 -i nonlinear"
 
