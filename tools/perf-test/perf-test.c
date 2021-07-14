@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <alsa/asoundlib.h>
+#include <inttypes.h>
 
 #define PAYLOAD_BUFFER_SIZE (100000ul)
 
@@ -215,7 +216,7 @@ static inline void doSend(void)
       *p++ = val++;
 
     cursorUp(1);
-    printf("n:%lu, s:%5u\n", messageNo++, size);
+    printf("n:%" PRIu64 ", s:%5u\n", messageNo++, size);
     fflush(stdout);
 
     messageLen = encodeSysex(dataBuf, size, sendBuf);
@@ -323,7 +324,7 @@ static inline BOOL examineContent(void const *const data, unsigned const len)
 
   if (packetSize != len)
   {
-    error("receive: packet has wrong length %lu, expected %lu", len, packetSize);
+    error("receive: packet has wrong length %" PRIu64 ", expected %" PRIu64, len, packetSize);
     return FALSE;
   }
 
@@ -331,17 +332,17 @@ static inline BOOL examineContent(void const *const data, unsigned const len)
   {
     if (packetNumber != packetCntr)
     {
-      error("receive: packet has wrong number %lu, expected %lu", packetNumber, packetCntr);
+      error("receive: packet has wrong number %" PRIu64 ", expected %" PRIu64, packetNumber, packetCntr);
       return FALSE;
     }
   }
   packetCntr = packetNumber;
 
   cursorUp(1);
-  printf("n:%lu, s:%5lu\n", packetNumber, packetSize);
+  printf("n:%" PRIu64 ", s:%5" PRIu64 "\n", packetNumber, packetSize);
   fflush(stdout);
 
-  uint16_t *p   = ((uint16_t *) data) + 24;
+  uint16_t *p   = (uint16_t *)&(((uint64_t *) data)[3]);
   uint16_t  val = packetNumber & 0xFFFF;
   for (unsigned i = 0; i < (packetSize - 24) / 2; i++)
   {
