@@ -169,16 +169,18 @@ static inline void doSend(void)
   snd_rawmidi_status_t *pStatus;
   snd_rawmidi_status_alloca(&pStatus);
 
-#if 01
   snd_rawmidi_params_t *pParams;
   snd_rawmidi_params_alloca(&pParams);
 
-  if ((err = snd_rawmidi_params_set_buffer_size(port, pParams, sizeof sendBuf)) < 0)
+  snd_rawmidi_params_current(port, pParams);
+  snd_rawmidi_params_set_buffer_size(port, pParams, sizeof sendBuf);
+  snd_rawmidi_params(port, pParams);
+  snd_rawmidi_params_current(port, pParams);
+  if (snd_rawmidi_params_get_buffer_size(pParams) != sizeof sendBuf)
   {
-    error("cannot set send buffer size of %d : %s", sizeof sendBuf, snd_strerror(err));
+    error("cannot set send buffer size of %d", sizeof sendBuf);
     return;
   }
-#endif
 
   if ((err = snd_rawmidi_nonblock(port, 0)) < 0)
   {
@@ -455,17 +457,18 @@ static inline void doReceive(void)
   snd_rawmidi_status_t *pStatus;
   snd_rawmidi_status_alloca(&pStatus);
 
-#if 01
   snd_rawmidi_params_t *pParams;
-
   snd_rawmidi_params_alloca(&pParams);
 
-  if ((err = snd_rawmidi_params_set_buffer_size(port, pParams, sizeof buf)) < 0)
+  snd_rawmidi_params_current(port, pParams);
+  snd_rawmidi_params_set_buffer_size(port, pParams, sizeof buf);
+  snd_rawmidi_params(port, pParams);
+  snd_rawmidi_params_current(port, pParams);
+  if (snd_rawmidi_params_get_buffer_size(pParams) != sizeof buf)
   {
-    error("cannot set receive buffer size of %d : %s", sizeof buf, snd_strerror(err));
+    error("cannot set send buffer size of %d", sizeof buf);
     return;
   }
-#endif
 
   if ((err = snd_rawmidi_nonblock(port, 1)) < 0)
   {
