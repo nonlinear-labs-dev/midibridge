@@ -33,6 +33,7 @@ static BOOL           send;   // flag for program function: 1-->send , 0-->recei
 static char const *   pName;  // port name
 static snd_rawmidi_t *port;   // MIDI port
 static BOOL           stop;
+static int            blkSize = -1;
 
 static BOOL dump = FALSE;
 
@@ -56,16 +57,18 @@ static void cursorUp(uint8_t lines)
 static void usage(void)
 {
   printf(
-      "Usage: perf-test -s|-r port\n"
+      "Usage: perf-test -s|-r port [blksize]\n"
       "\n"
       "-s     : send test data\n"
       "-r     : receive test data\n"
-      "port   : MIDI port to test (in hw:x,y,z notation, see ouput of 'amidi -l'\n");
+      "port   : MIDI port to test (in hw:x,y,z notation, see ouput of 'amidi -l'\n"
+      "blksize: fixed block size of data chunk, for send only\n"
+      "         (also disables sleep time between messages)\n");
 }
 
 static inline void getCmdLineParams(int const argc, char const *const argv[])
 {
-  if (argc != 3)
+  if (argc != 3 && argc != 4)
   {
     error("missing parameters\n");
     usage();
@@ -84,6 +87,16 @@ static inline void getCmdLineParams(int const argc, char const *const argv[])
   }
 
   pName = argv[2];
+
+  if (argc == 4)
+  {
+    if ((1 != sscanf(argv[3], "%i", &blkSize)) || (blkSize < 0))
+    {
+      error("illegal block size\n");
+      usage();
+      exit(1);
+    }
+  }
 }
 
 static inline void openPort(void)
@@ -195,6 +208,10 @@ static inline void doSend(void)
 
   printf("Sending data to port: %s\n\n\n", pName);
 
+  uint64_t startTime  = getTimeUSec();
+  uint64_t totalBytes = 0;
+  uint64_t now        = startTime;
+
   do
   {
     memset(dataBuf, runningCntr++, sizeof(dataBuf));
@@ -204,12 +221,19 @@ static inline void doSend(void)
     ((uint64_t *) dataBuf)[0] = getTimeUSec();
     ((uint64_t *) dataBuf)[1] = messageNo;
 
-    unsigned expo = ((unsigned) rand()) % 11;  // 0..10
-    unsigned size = 1 << expo;                 // 2^0...2^10(1024)
-    size += ((unsigned) rand()) & (size - 1);  // 0..2047
+    unsigned size;
+    if (blkSize >= 0)
+      size = blkSize;
+    else
+    {
+      unsigned expo = ((unsigned) rand()) % 11;  // 0..10
+      size          = 1 << expo;                 // 2^0...2^10(1024)
+      size += ((unsigned) rand()) & (size - 1);  // 0..2047
+    }
     if (size & 1)
       size++;
     size += 24;
+
     ((uint64_t *) dataBuf)[2] = size;
 
     uint16_t *p   = (uint16_t *) &(dataBuf[24]);
@@ -265,7 +289,7 @@ static inline void doSend(void)
         time = 1000ul * 1000ul;
 
       uint64_t sleepTime = getTimeUSec();
-      usleep(time);
+      usleep((blkSize >= 0) ? time : 0);  // don't pause with constant block sizes
       sleepTime = getTimeUSec() - sleepTime;
       messageTime += sleepTime;
     }
@@ -274,7 +298,10 @@ static inline void doSend(void)
       ;  //printf("total of %d bytes transferred\n", total);
     }
 
-    messageTime = getTimeUSec() - messageTime;
+    uint64_t tmp = getTimeUSec();
+
+    totalBytes += messageLen;
+    messageTime = tmp - messageTime;
 
     static uint64_t min = ~(uint64_t) 0;
     static uint64_t max = 0;
@@ -293,11 +320,13 @@ static inline void doSend(void)
       cnt /= 2;
       sum /= 2;
     }
-    if (cnt % 50 == 0)
+    if (tmp - now > 300000)
     {
+      now = tmp;
       cursorUp(2);
-      printf("%6.2lfms(min) %6.1lfms(max) %6.1lfms(avg)\n\n",
-             ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt);
+      printf("%6.2lfms(min) %6.2lfms(max) %6.2lfms(avg)  %6.2lfkB/s\n\n",
+             ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt,
+             1000.0 * (double) totalBytes / (double) (getTimeUSec() - startTime));
       fflush(stdout);
       max = max * 0.99;
       min = min / 0.80;
@@ -311,6 +340,9 @@ static inline void doSend(void)
 //
 
 uint64_t packetCntr;
+uint64_t rcvStartTime;
+uint64_t rcvTotalBytes = 0;
+uint64_t rcvNow;
 
 static inline BOOL examineContent(void const *const data, unsigned const len)
 {
@@ -344,7 +376,7 @@ static inline BOOL examineContent(void const *const data, unsigned const len)
   printf("n:%" PRIu64 ", s:%5" PRIu64 "\n", packetNumber, packetSize);
   fflush(stdout);
 
-  uint16_t *p   = (uint16_t *)&(((uint64_t *) data)[3]);
+  uint16_t *p   = (uint16_t *) &(((uint64_t *) data)[3]);
   uint16_t  val = packetNumber & 0xFFFF;
   for (unsigned i = 0; i < (packetSize - 24) / 2; i++)
   {
@@ -355,8 +387,9 @@ static inline BOOL examineContent(void const *const data, unsigned const len)
     }
   }
 
-  uint64_t const now  = getTimeUSec();
-  uint64_t       time = now - packetTime;
+  rcvTotalBytes += packetSize;
+  uint64_t const tmp  = getTimeUSec();
+  uint64_t       time = tmp - packetTime;
 
   static uint64_t min = ~(uint64_t) 0;
   static uint64_t max = 0;
@@ -375,11 +408,13 @@ static inline BOOL examineContent(void const *const data, unsigned const len)
     cnt /= 2;
     sum /= 2;
   }
-  if (cnt % 50 == 0)
+  if (tmp - rcvNow > 300000)
   {
+    rcvNow = tmp;
     cursorUp(2);
-    printf("%6.2lfms(min) %6.1lfms(max) %6.1lfms(avg)\n\n",
-           ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt);
+    printf("%6.2lfms(min) %6.2lfms(max) %6.2lfms(avg)  %6.2lfkB/s\n\n",
+           ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt,
+           1000.0 * (double) rcvTotalBytes / (double) (getTimeUSec() - rcvStartTime));
     fflush(stdout);
     max = max * 0.99;
     min = min / 0.80;
@@ -482,6 +517,9 @@ static inline void doReceive(void)
   signal(SIGINT, sigHandler);
 
   printf("Receiving data from port: %s\n\n\n", pName);
+
+  rcvStartTime = getTimeUSec();
+  rcvNow       = rcvStartTime;
 
   do
   {
