@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.2)
 
 project(midibridge)
 
-
 set(FIRMWARE_DIRNAME firmware)
 set(TOOLS_DIRNAME    tools)
 
