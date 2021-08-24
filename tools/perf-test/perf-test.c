@@ -289,7 +289,7 @@ static inline void doSend(void)
         time = 1000ul * 1000ul;
 
       uint64_t sleepTime = getTimeUSec();
-      usleep((blkSize >= 0) ? time : 0);  // don't pause with constant block sizes
+      usleep((blkSize >= 0) ? 100 : time);  // don't dynamically pause with constant block sizes
       sleepTime = getTimeUSec() - sleepTime;
       messageTime += sleepTime;
     }
