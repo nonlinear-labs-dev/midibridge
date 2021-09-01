@@ -17,7 +17,7 @@
 #define BCDUSB_2_0 0x0200
 
 #ifdef SEPARATE_USB_DEVICE_IDS  // use different IDs and strings for HS and FS port, for debug/test
-#warning Compiling for different USB IDs and strings for HS and FS port, for debug/test
+#warning "Compiling for different USB IDs and strings for HS and FS port, for debug/test"
 
 /** Product Id */
 // Host id's the device by this number, no matter wrt FS or HS port used.

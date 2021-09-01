@@ -3,7 +3,7 @@
 #include "pin_setup.h"
 
 #ifdef EVAL_BOARD
-#warning Forcing Compile for Evaluation Board specifics (GPIOs for LEDs etc)
+#warning "Forcing Compile for Evaluation Board specifics (GPIOs for LEDs etc)"
 #endif
 
 extern uint8_t isEvalPCB;
