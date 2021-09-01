@@ -3,9 +3,11 @@
  
 ## Project Organization
 * firmware/src contains two projects:
-  * the microcontroller main firmware application. Required packages: cmake, gcc, gcc-arm-none-eabi. CMake switches : 
-      * `cmake -DEVAL_BOARD=On|Off path/to/source-dir` --> Force GPIOs for LEDs etc as wired on the evalution board. When set to 'Off' auto-detection will be used.
-      * `cmake -DSEPARATE_USB_DEVICE_IDS=On|Off path/to/source-dir` --> use different USB device IDs and strings for HS and FS port, for debug/test.
+  * the microcontroller main firmware application. Required packages: cmake, gcc, gcc-arm-none-eabi. CMake switches (Usage is `cmake [-Dswitch=On|Off [-Dswitch=On|Off ...]] path/to/source-dir`) : 
+      * `EVAL_BOARD` --> Force GPIOs for LEDs etc as wired on the evalution board. When set to 'Off' auto-detection will be used.
+      * `SEPARATE_USB_DEVICE_IDS` --> use different USB device IDs and strings for HS and FS port. For debug/test.
+      * `LONG_PACKET_TIMEOUTS` --> Use long packet timeouts of 1s for the inital packet and 100ms for followling packets.For debug/test.
+      * `BETA_FIRMWARE` --> Mark a firmware optically as Beta in the firmware version display by adding 3 times blinking red on both LEDs after version display. For debug/test.    
   * a uC firmware component 'in-app-flasher' to flash this firmware into the uC. The image of this flasher is uploaded into RAM via USB in form of a MIDI SysEx message and then executed. The image of the main firmware is contained (statically linked) within the in-app-flasher and hence the executed code can flash the new firmware.
 * tools/mk-sysex is a helper tool mainly for use at build-time to create the proper SysEx message from the binary image of the in-app-flasher.
 * tools/perf-test is a helper tool to check/test the midi-bridge for general operation, data integrity and latency.
