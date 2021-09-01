@@ -12,6 +12,19 @@ if(SEPARATE_USB_DEVICE_IDS)
 endif(SEPARATE_USB_DEVICE_IDS)
 unset(SEPARATE_USB_DEVICE_IDS) # <---- this is the important!!
 
+option(LONG_PACKET_TIMEOUTS "Use long packet timeouts of 1s for the inital packet and 100ms for followling packets.For debug/test" OFF) #OFF by default
+if(LONG_PACKET_TIMEOUTS)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D LONG_PACKET_TIMEOUTS")
+endif(LONG_PACKET_TIMEOUTS)
+unset(LONG_PACKET_TIMEOUTS) # <---- this is the important!!
+
+option(BETA_FIRMWARE "Mark a firmware optically as Beta in the firmware version display by adding 3 times blinking red on both LEDs after version display. For debug/test" OFF) #OFF by default
+if(BETA_FIRMWARE)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D BETA_FIRMWARE")
+endif(BETA_FIRMWARE)
+unset(BETA_FIRMWARE) # <---- this is the important!!
+
+
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m4 -mthumb")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-pragmas -fno-builtin -nodefaultlibs -nostdlib")
