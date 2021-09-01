@@ -71,9 +71,31 @@ int showFirmwareVersion(void)
       }
       break;
 
+#ifndef BETA_FIRMWARE
     case 6:
       step = 0;  // done
       break;
+#else
+    case 6:
+    case 8:
+    case 10:
+      LED_SetDirect(0, 0b001);
+      LED_SetDirect(1, 0b001);
+      wait = LONG;
+      step++;
+      break;
+    case 7:
+    case 9:
+    case 11:
+      LED_SetDirect(0, 0b000);
+      LED_SetDirect(1, 0b000);
+      wait = LONG;
+      step++;
+      break;
+    case 12:
+      step = 0;
+      break;
+#endif
   }
   return 1;  // still displaying
 }
