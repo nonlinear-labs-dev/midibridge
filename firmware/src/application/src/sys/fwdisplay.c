@@ -1,6 +1,10 @@
 #include "sys/nl_version.h"
 #include "drv/nl_leds.h"
 
+#ifdef BETA_FIRMWARE
+#warning "This build will be marked as Beta in the Firmware Display (3x red flasshing)"
+#endif
+
 #define SHORT  (250000ul / 125)
 #define MEDIUM (500000ul / 125)
 #define LONG   (1000000ul / 125)

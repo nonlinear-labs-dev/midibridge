@@ -9,6 +9,12 @@
 #include "devctl/devctl.h"
 #include "midi/nl_devctl_defs.h"
 
+
+#ifdef LONG_PACKET_TIMEOUTS
+#warning "This build will use long packet timeouts!"
+#endif
+
+
 #define usToTicks(x) ((x + 75ul) / 125ul)     // usecs to 125 ticker counts
 #define msToTicks(x) (((x) *1000ul) / 125ul)  // msecs to 125 ticker counts
 
