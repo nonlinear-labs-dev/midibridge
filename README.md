@@ -3,15 +3,16 @@
  
 ## Project Organization
 * firmware/src contains two projects:
-  * the microcontroller main firmware application. Required packages: cmake, gcc, gcc-arm-none-eabi. CMake switches (Usage is `cmake [-Dswitch=On|Off [-Dswitch=On|Off ...]] path/to/source-dir`) : 
-      * `EVAL_BOARD` --> Force GPIOs for LEDs etc as wired on the evalution board. When set to 'Off' auto-detection will be used.
-      * `SEPARATE_USB_DEVICE_IDS` --> use different USB device IDs and strings for HS and FS port. For debug/test.
-      * `LONG_PACKET_TIMEOUTS` --> Use long packet timeouts of 1s for the inital packet and 100ms for followling packets.For debug/test.
-      * `BETA_FIRMWARE` --> Mark a firmware optically as Beta in the firmware version display by adding 3 times blinking red on both LEDs after version display. For debug/test.    
-  * a uC firmware component 'in-app-flasher' to flash this firmware into the uC. The image of this flasher is uploaded into RAM via USB in form of a MIDI SysEx message and then executed. The image of the main firmware is contained (statically linked) within the in-app-flasher and hence the executed code can flash the new firmware.
+  * the microcontroller main firmware application. Required packages: _cmake_, native _gcc_ and _gcc-arm-none-eabi_ cross-compiler, _libasound2-dev_. No docker encapsulation.
+  * a uC firmware component 'in-app-flasher' to flash this firmware into the uC. The image of this flasher is uploaded into RAM via USB in form of a MIDI SysEx message and then executed. The image of the main firmware is contained (statically linked) within the in-app-flasher and hence the executed code can flash the new firmware. The final update image in form of a MIDI SysEx file can be found in the top build dir under `firmware/src/in-app-flasher/in-app-flasher.syx` and as a named duplictate `firmware/src/in-app-flasher/nlmb-fw-update-Va.bb.syx` with `a` being the major version number and `bb` being the two digit minor version number.
 * tools/mk-sysex is a helper tool mainly for use at build-time to create the proper SysEx message from the binary image of the in-app-flasher.
 * tools/perf-test is a helper tool to check/test the midi-bridge for general operation, data integrity and latency.
-Those helper tools are compiled for the platform the build system is running on (no docker encapsulation), and as long as that is a x86 Linux, any x86 linux-based system can run these standalone as well.
+Those helper tools are compiled for the platform the _build system_ is running on (and again, no docker encapsulation).
+* CMake switches, effective for the 'firmware' section (Usage is `cmake -DEVAL_BOARD=On|Off  -DSEPARATE_USB_DEVICE_IDS=On|Off  -DLONG_PACKET_TIMEOUTS=On|Off  -DBETA_FIRMWARE=On|Off  path/to/source-dir`) : 
+  * `EVAL_BOARD` --> Force GPIOs for LEDs etc as wired on the evalution board. When set to 'Off' auto-detection will be used.
+  * `SEPARATE_USB_DEVICE_IDS` --> use different USB device IDs and strings for HS and FS port. For debug/test.
+  * `LONG_PACKET_TIMEOUTS` --> Use long packet timeouts of 1s for the inital packet and 100ms for followling packets.For debug/test.
+  * `BETA_FIRMWARE` --> Mark a firmware optically as Beta in the firmware version display by adding 3 times blinking red on both LEDs after version display. For debug/test.    
 
 Toolchain setups are provided for two platforms:
 * automated build of all components with CMake
