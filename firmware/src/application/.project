@@ -160,6 +160,16 @@
 			<locationURI>PARENT-1-PROJECT_LOC/shared/sys/delays.h</locationURI>
 		</link>
 		<link>
+			<name>src/shared/sys/flash.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/sys/flash.c</locationURI>
+		</link>
+		<link>
+			<name>src/shared/sys/flash.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/shared/sys/flash.h</locationURI>
+		</link>
+		<link>
 			<name>src/shared/sys/nl_stdlib.h</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/shared/sys/nl_stdlib.h</locationURI>

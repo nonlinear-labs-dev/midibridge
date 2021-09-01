@@ -2,7 +2,7 @@
 #include "drv/nl_leds.h"
 
 #ifdef BETA_FIRMWARE
-#warning "This build will be marked as Beta in the Firmware Display (3x red flasshing)"
+#warning "This build will be marked as Beta in the Firmware Display (3x red flashing)"
 #endif
 
 #define SHORT  (250000ul / 125)
