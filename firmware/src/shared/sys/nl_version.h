@@ -11,13 +11,14 @@
 //  1.05 : added LED test sysex command
 //  1.06 : added: Reset after successful flashing, detach all USB before flashing, auto-detect board type
 //  2.01 : use assigned ID's for USB and MIDI SysEx, shorter time-outs until stalling packets are dropped
+//  2.02 : added Unique Device ID
 
 // clang-format off
 // just set up the X.YZ style of version number vertically in below
 #define SW_VERSION_MAJOR    2
 // delimiter                .
 #define SW_VERSION_MINOR_H  0
-#define SW_VERSION_MINOR_L  1
+#define SW_VERSION_MINOR_L  2
 // clang-format on
 
 #define STR_IMPL_(x) #x            // stringify argument

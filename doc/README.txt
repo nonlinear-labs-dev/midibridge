@@ -5,6 +5,7 @@
 //  1.05 : added LED test sysex command
 //  1.06 : added: Reset after successful flashing, detach all USB before flashing, auto-detect board type
 //  2.01 : use assigned ID's for USB and MIDI SysEx, shorter time-outs until stalling packets are dropped, fixed resume bug
+//  2.02 : added Unique Device ID
 
 >>> Firmware Update Instructions <<<
 
