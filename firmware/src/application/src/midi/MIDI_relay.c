@@ -13,10 +13,18 @@
 #define msToTicks(x) (((x) *1000ul) / 125ul)  // msecs to 125 ticker counts
 
 //timeout in usecs until a first packet is aborted
-#define PACKET_TIMEOUT msToTicks(100)
+// short timeout in usecs until the next packet is aborted
+#ifndef LONG_PACKET_TIMEOUTS
 
-// timeout in usecs until the next packet is aborted
+#define PACKET_TIMEOUT msToTicks(100)
 #define PACKET_TIMEOUT_SHORT msToTicks(5)
+
+#else
+
+#define PACKET_TIMEOUT msToTicks(1000)
+#define PACKET_TIMEOUT_SHORT msToTicks(100)
+
+#endif
 
 typedef enum
 {
