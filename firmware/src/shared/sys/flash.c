@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "cmsis/LPC43xx.h"
 #include "cmsis/lpc43xx_cgu.h"
+#include "flash.h"
 
 static uint32_t commandParam[5];
 static uint32_t statusResult[5];
@@ -53,6 +54,22 @@ static int iapEraseSectors(uint32_t const startSector, uint32_t const endSector,
   commandParam[4] = bank;
   iapEntry(commandParam, statusResult);
   return statusResult[0] == IAP_CMD_SUCCESS;
+}
+
+int iapGetUniqueId(iapUniqueId_t *pId)
+{
+  iapEntry        = (IAP_t) IAP_LOCATION;
+  commandParam[0] = 58;  // CMD : Read device unique ID
+  iapEntry(commandParam, statusResult);
+  if ((statusResult[0] == IAP_CMD_SUCCESS) && (pId != NULL))
+  {
+    pId->data[0] = statusResult[1];
+    pId->data[1] = statusResult[2];
+    pId->data[2] = statusResult[3];
+    pId->data[3] = statusResult[4];
+    return 1;
+  }
+  return 0;
 }
 
 // buf : data, on a word boundary

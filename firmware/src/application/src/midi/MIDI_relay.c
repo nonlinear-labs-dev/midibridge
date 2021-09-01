@@ -1,6 +1,7 @@
 #include "midi/MIDI_relay.h"
 #include "usb/nl_usb_midi.h"
 #include "usb/nl_usb_core.h"
+#include "usb/nl_usb_descmidi.h"
 #include "io/pins.h"
 #include "drv/error_display.h"
 #include "sys/nl_stdlib.h"
@@ -9,11 +10,9 @@
 #include "devctl/devctl.h"
 #include "midi/nl_devctl_defs.h"
 
-
 #ifdef LONG_PACKET_TIMEOUTS
 #warning "This build will use long packet timeouts!"
 #endif
-
 
 #define usToTicks(x) ((x + 75ul) / 125ul)     // usecs to 125 ticker counts
 #define msToTicks(x) (((x) *1000ul) / 125ul)  // msecs to 125 ticker counts
@@ -22,12 +21,12 @@
 // short timeout in usecs until the next packet is aborted
 #ifndef LONG_PACKET_TIMEOUTS
 
-#define PACKET_TIMEOUT msToTicks(100)
+#define PACKET_TIMEOUT       msToTicks(100)
 #define PACKET_TIMEOUT_SHORT msToTicks(5)
 
 #else
 
-#define PACKET_TIMEOUT msToTicks(1000)
+#define PACKET_TIMEOUT       msToTicks(1000)
 #define PACKET_TIMEOUT_SHORT msToTicks(100)
 
 #endif
@@ -270,6 +269,7 @@ void MIDI_Relay_Init(void)
   packetTransferReset(&packetTransfer[1]);
   USB_MIDI_Config(0, Receive_IRQ_FirstCallback);
   USB_MIDI_Config(1, Receive_IRQ_FirstCallback);
+  USB_MIDI_SetupDescriptors();
   USB_MIDI_Init(0);
   USB_MIDI_Init(1);
 }

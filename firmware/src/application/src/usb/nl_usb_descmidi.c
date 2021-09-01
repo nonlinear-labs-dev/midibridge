@@ -11,6 +11,7 @@
 #include "usb/nl_usbd.h"
 #include "usb/nl_usb_core.h"
 #include "usb/nl_usb_descmidi.h"
+#include "sys/flash.h"
 
 /* USB Standard Device Descriptor */
 const uint8_t USB0_MIDI_DeviceDescriptor[] = {
@@ -276,7 +277,7 @@ const uint8_t USB_MIDI_HSConfigDescriptor[] = {
 
 // clang format off
 /* USB String Descriptor (optional) */
-const uint8_t USB0_MIDI_StringDescriptor[] = {
+uint8_t USB0_MIDI_StringDescriptor[] = {
   /* Index 0x00: LANGID Codes */
   0x04,                           /* bLength */
   USB_STRING_DESCRIPTOR_TYPE,     /* bDescriptorType */
@@ -290,9 +291,10 @@ const uint8_t USB0_MIDI_StringDescriptor[] = {
   '-', 0, 'l', 0, 'a', 0, 'b', 0, 's', 0, '.', 0, 'd', 0, 'e', 0, ')', 0,
 /* Index 0x02: Product */
 #if PRODUCT_ID_HS == PRODUCT_ID_FS
-  (15 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
+  (25 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
   USB_STRING_DESCRIPTOR_TYPE, /* bDescriptorType */
   'N', 0, 'L', 0, 'L', 0, '-', 0, 'M', 0, 'I', 0, 'D', 0, 'I', 0, '-', 0, 'B', 0, 'r', 0, 'i', 0, 'd', 0, 'g', 0, 'e', 0,
+  '(', 0, 'x', 0, 'x', 0, 'x', 0, 'x', 0, 'x', 0, 'x', 0, 'x', 0, 'x', 0, ')', 0,
   0, 0
 #else
   (14 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
@@ -302,7 +304,7 @@ const uint8_t USB0_MIDI_StringDescriptor[] = {
 #endif
 };
 
-const uint8_t USB1_MIDI_StringDescriptor[] = {
+uint8_t USB1_MIDI_StringDescriptor[] = {
   /* Index 0x00: LANGID Codes */
   0x04,                           /* bLength */
   USB_STRING_DESCRIPTOR_TYPE,     /* bDescriptorType */
@@ -316,9 +318,10 @@ const uint8_t USB1_MIDI_StringDescriptor[] = {
   '-', 0, 'l', 0, 'a', 0, 'b', 0, 's', 0, '.', 0, 'd', 0, 'e', 0, ')', 0,
 /* Index 0x02: Product */
 #if PRODUCT_ID_HS == PRODUCT_ID_FS
-  (15 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
+  (25 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
   USB_STRING_DESCRIPTOR_TYPE, /* bDescriptorType */
   'N', 0, 'L', 0, 'L', 0, '-', 0, 'M', 0, 'I', 0, 'D', 0, 'I', 0, '-', 0, 'B', 0, 'r', 0, 'i', 0, 'd', 0, 'g', 0, 'e', 0,
+  '(', 0, 'x', 0, 'x', 0, 'x', 0, 'x', 0, 'x', 0, 'x', 0, 'x', 0, 'x', 0, ')', 0,
   0, 0
 #else
   (14 * 2 + 2),               /* ???? bLength ( 22 Char + Type + length) */
@@ -341,3 +344,17 @@ const uint8_t USB_MIDI_DeviceQualifier[] = {
   0x01,                                 /* bNumOtherSpeedConfigurations */
   0x00                                  /* bReserved */
 };
+
+void USB_MIDI_SetupDescriptors(void)
+{
+#if PRODUCT_ID_HS == PRODUCT_ID_FS
+  char const    hexToCharTable[16] = "0123456789ABCDEF";
+  iapUniqueId_t id;
+  if (iapGetUniqueId(&id))
+  {
+    uint32_t idVal = id.data[0] ^ id.data[1] ^ id.data[2] ^ id.data[3];
+    for (int i = 0; i < 8; i++, idVal >>= 4)
+      USB0_MIDI_StringDescriptor[0x70 + 2 * i] = USB1_MIDI_StringDescriptor[0x70 + 2 * i] = hexToCharTable[idVal & 0xF];
+  }
+#endif
+}
