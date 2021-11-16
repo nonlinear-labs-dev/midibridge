@@ -8,9 +8,9 @@
 #include "pins.h"
 #undef PINS_LOCAL
 
-volatile uint32_t* LEDs[6];        // LED0 RGB and LED1 RGB
+__attribute__((section(".noinit.$RamAHB32"))) volatile uint32_t* LEDs[6];        // LED0 RGB and LED1 RGB
+__attribute__((section(".noinit.$RamAHB32"))) volatile uint32_t* DEBUG[2];       // DebugPins/LEDs 0 and 1
 volatile uint32_t* USBVBUS[2];     // USB Vbus 0 and 1
-volatile uint32_t* DEBUG[2];       // DebugPins/LEDs 0 and 1
 uint32_t           __dummy_pin__;  // dummy for unavailable pins
 
 static uint8_t pbcaVersion = 0xFF;
@@ -28,7 +28,7 @@ void PINS_Init(void)
 {
   setupPCBAtype();
 
-  // system LEDs are active LOW
+  // system LEDs all ON (white). Pins are active LOW
   LED_RED0   = 0;
   LED_GREEN0 = 0;
   LED_BLUE0  = 0;
