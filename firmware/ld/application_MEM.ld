@@ -1,8 +1,9 @@
 /* Define each memory region, for M4 core */
+/* Suitable for LP4337 and LPC4333 */
 MEMORY
 {
-  MFlashA512 (   rx) : ORIGIN = 0x1a000000, LENGTH = 0x80000   /* 512K bytes (alias Flash)  -- code and initialized data image */  
-  MFlashB512    (rx) : ORIGIN = 0x1b000000, LENGTH = 0x80000   /* 512K bytes (alias Flash2) -- unused */  
+  MFlashA256 (   rx) : ORIGIN = 0x1a000000, LENGTH = 0x40000   /* 256K bytes (alias Flash)  -- code and initialized data image */  
+  MFlashB256    (rx) : ORIGIN = 0x1b000000, LENGTH = 0x40000   /* 256K bytes (alias Flash2) -- unused */  
   RamLoc40     (rwx) : ORIGIN = 0x10080000, LENGTH = 0xa000    /* 40K bytes  (alias RAM1)   -- data upload buffer */  
   RamAHB32     (rwx) : ORIGIN = 0x20000000, LENGTH = 0x8000    /* 32K bytes  (alias RAM2)   -- Unused */
   RamAHB16     (rwx) : ORIGIN = 0x20008000, LENGTH = 0x4000    /* 16K bytes  (alias RAM3)   -- Main RAM for DATA and STACK */  
@@ -11,15 +12,15 @@ MEMORY
 }
 
 /* Define a symbol for base and top of each memory region */
-  __base_MFlashA512 = 0x1a000000  ; /* MFlashA512 */  
-  __base_Flash = 0x1a000000 ; /* Flash */  
-  __top_MFlashA512 = 0x1a000000 + 0x80000 ; /* 512K bytes */  
-  __top_Flash = 0x1a000000 + 0x80000 ; /* 512K bytes */  
+  __base_MFlashA256 = 0x1a000000  ; /* MFlashA256 */  
+  __base_Flash = 0x1a000000 ;       /* Flash */  
+  __top_MFlashA256 = 0x1a000000 + 0x40000 ; /* 256K bytes */  
+  __top_Flash = 0x1a000000 + 0x40000 ;      /* 256K bytes */  
 
-  __base_MFlashB512 = 0x1b000000  ; /* MFlashB512 */  
-  __base_Flash2 = 0x1b000000 ; /* Flash2 */  
-  __top_MFlashB512 = 0x1b000000 + 0x80000 ; /* 512K bytes */  
-  __top_Flash2 = 0x1b000000 + 0x80000 ; /* 512K bytes */  
+  __base_MFlashB256 = 0x1b000000  ; /* MFlashB256 */  
+  __base_Flash2 = 0x1b000000 ;      /* Flash2 */  
+  __top_MFlashB256 = 0x1b000000 + 0x40000 ; /* 256K bytes */  
+  __top_Flash2 = 0x1b000000 + 0x40000 ;     /* 256K bytes */  
 
   __base_RamLoc40 = 0x10080000  ; /* RamLoc40 */  
   __top_RamLoc40 = 0x10080000 + 0xa000 ; /* 40K bytes */  

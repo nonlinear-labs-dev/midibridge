@@ -30,6 +30,9 @@
 //*****************************************************************************
 
 #include "io/pins.h"
+#include "cmsis/LPC43xx.h"
+#include "cmsis/core_cm4.h"
+#include "cmsis/core_cmFunc.h"
 
 #if defined(__cplusplus)
 #ifdef __REDLIB__
@@ -310,7 +313,7 @@ extern unsigned int __bss_section_table_end;
 //*****************************************************************************
 void ResetISR(void)
 {
-  debugPinsInit();
+  PINS_Init();
 
 // *************************************************************
 // The following conditional block of code manually resets as
@@ -462,8 +465,8 @@ static inline void faultDisplay(void)
   LED_GREEN1 = 0;
   LED_BLUE0  = 0;
   LED_BLUE1  = 0;
-  LED_DBG2   = 1;
-  LED_DBG3   = 1;
+  LED_DBG0   = 1;
+  LED_DBG1   = 1;
   __disable_irq();
   while (1)
   {
