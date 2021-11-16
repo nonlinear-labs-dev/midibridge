@@ -264,7 +264,7 @@ static void initV2aPins(void)
 
 static void Delay300us(void)
 {
-  register uint32_t cnt = 30000;  // 30'000 * 10ns = 300us
+  register uint32_t cnt = 100000;  // 100'000 * 10ns = 1ms @ 96kHz or 0.5ms @ 204MHz
   while (--cnt)
-    asm volatile("nop");  // 1 cycle = 10ns (@96MHz)
+    asm volatile("nop");
 }
