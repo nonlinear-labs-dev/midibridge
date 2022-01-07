@@ -157,11 +157,11 @@ static void initEvalBoardPins(void)
 
   // VBUS_0
   GPIO_DIR_IN(3, 0);
-  SFSP(6, 1) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0;
+  SFSP(6, 1) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_DPD + SFS_DPU + 0;
   USBVBUS[0] = pGPIO_Word(3, 0);
   // VBUS_1
   GPIO_DIR_IN(3, 1);
-  SFSP(6, 2) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0;
+  SFSP(6, 2) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_DPD + SFS_DPU + 0;
   USBVBUS[1] = pGPIO_Word(3, 1);
 
   // LED_DBG0
@@ -203,11 +203,11 @@ static void initV1aPins(void)
 
   // VBUS_0
   GPIO_DIR_IN(2, 0);
-  SFSP(4, 0) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0;
+  SFSP(4, 0) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_DPD + SFS_DPU + 0;
   USBVBUS[0] = pGPIO_Word(2, 0);
   // VBUS_1
   GPIO_DIR_IN(3, 0);
-  SFSP(6, 1) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0;
+  SFSP(6, 1) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_DPD + SFS_DPU + 0;
   USBVBUS[1] = pGPIO_Word(3, 0);
 
   // LED_DBG0
@@ -245,12 +245,12 @@ static void initV2aPins(void)
 
   // VBUS_0
   GPIO_DIR_IN(5, 7);
-  SFSP(2, 8) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 4;
+  SFSP(2, 8) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_DPD + SFS_DPU + 4;
   USBVBUS[0] = pGPIO_Word(5, 7);
   // VBUS_1
-  GPIO_DIR_IN(0, 12);
-  SFSP(1, 17) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_EPD + SFS_EPU + 0;
-  USBVBUS[1]  = pGPIO_Word(0, 12);
+  GPIO_DIR_IN(0, 15);
+  SFSP(1, 20) = SFS_EIF + SFS_EIB + SFS_DHS + SFS_DPD + SFS_DPU + 0;
+  USBVBUS[1]  = pGPIO_Word(0, 15);
 
   // LED_DBG0
   GPIO_DIR_OUT(5, 0);

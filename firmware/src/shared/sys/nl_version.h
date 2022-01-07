@@ -11,7 +11,7 @@
 //  1.05 : added LED test sysex command
 //  1.06 : added: Reset after successful flashing, detach all USB before flashing, auto-detect board type
 //  2.01 : use assigned ID's for USB and MIDI SysEx, shorter time-outs until stalling packets are dropped
-//  2.02 : added Unique Device ID
+//  2.02 : added Unique Device ID, auto-detect board type extended for latest PCB revision
 
 // clang-format off
 // just set up the X.YZ style of version number vertically in below
@@ -31,4 +31,4 @@
 // !! SW_VERSION in below string must follow directly after the "VERSION: " part
 // as the firmware version scanner in the 'mk-sysex' tool depends on this!
 // Also, one can use  grep -oP '(?<=VERSION:).*' | sed 's: ::g'  to extract version number from image
-static const char VERSION_STRING[] = "\n\nNLL MIDI Host-to-Host Bridge, LPC4337, FIRMWARE VERSION: " SW_VERSION " \n\n\0\0\0";
+static const char VERSION_STRING[] = "\n\nNLL MIDI Host-to-Host Bridge, LPC433x, FIRMWARE VERSION: " SW_VERSION " \n\n\0\0\0";
