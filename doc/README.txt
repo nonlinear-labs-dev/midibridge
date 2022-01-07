@@ -26,16 +26,14 @@ try to deliver the MIDI data on the other port as in normal operation.
   - send to MIDI Bridge
   
 If the firmware update was successful, the MIDI Bridge will show that by both LEDs blinking fast in bright green color
-for 5 seconds, then it will reset itself and show the 
+for 5 seconds, then it will reset itself and show the new firmware Version with the corrsponding blink code.
 If not, try again the full cycle (note: try using also the other port of the MIDI bridge).
 
-4. Fully disconnect the MIDI Bridge and reconnect. 
-
-5. Optional Firmware Version Check:
+4. Optional Firmware Version Check:
 - Software like "MIDI Tools" must be restarted and then will show the new firmware version in the setup screen.
 - on Linux, use "usb-devices | grep -C 6 -i nonlinear"
 
-6. Unique Device ID:
+5. Unique Device ID:
 Sadly, Windows is not capable to show the Unique Device ID correctly which is part of the device name,
 neither in the Device Manager nor anywhere else, including MIDI applications. 
 This basically defeats the purpose of the Unique Device ID, telling several apart several attached MIDI Bridges.
@@ -43,7 +41,7 @@ Once Windows has detected a MIDI Bridge it will show any newly attached MIDI Bri
 forever from now on.
 The only way to refresh the display name is to remove all instances of the MIDI Bridge as seen by the Device Manager:
 Go to device manager, select "show hidden devices", then delete all "NLL-Bridge" entries
-(from the "Audio, Video and Gamecontroller" list), one by one. 
+(from the "Sound, video and game controllers" list), one by one. 
 Do this while the MIDI Bridge is *not* plugged in, of course.
 
 To our rescue there is an application called UsbTreeView (https://www.uwe-sieber.de/usbtreeview_e.html)
