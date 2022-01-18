@@ -30,13 +30,13 @@ void          dummyFunction(const char *string)
     dummy = *string++;
 }
 
-void main(void)
+int main(void)
 {
   // referencing the version string so compiler won't optimize it away
   dummyFunction(VERSION_STRING);
 
-  CPU_ConfigureClocks();
   PINS_Init();
+  CPU_ConfigureClocks();
   M4SysTick_Init();
   // we wait until here because USB handlers are interrupt-driven and everything has to be set up
   MIDI_Relay_Init();
@@ -50,6 +50,8 @@ void main(void)
       SMON_Process();
     }
   }
+
+  return 0;
 }
 
 /*************************************************************************/ /**

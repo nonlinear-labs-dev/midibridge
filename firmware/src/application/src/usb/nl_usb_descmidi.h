@@ -13,6 +13,9 @@
 /** MIDI device descriptor fields
  * @{
  */
+/** bcdUSB 1.1 */
+#define BCDUSB_1_1 0x0101
+
 /** bcdUSB 2.0 */
 #define BCDUSB_2_0 0x0200
 

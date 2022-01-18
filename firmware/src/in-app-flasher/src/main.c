@@ -6,6 +6,9 @@
 #include "io/pins.h"
 #include "sys/nl_version.h"
 #include "sys/nl_watchdog.h"
+#include "cmsis/LPC43xx.h"
+#include "cmsis/core_cm4.h"
+#include "cmsis/core_cmFunc.h"
 
 // these three symbols are provided by the dependent project "application",
 // which first makes a binary image file (*.image) from it's compile

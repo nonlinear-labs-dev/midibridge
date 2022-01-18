@@ -33,7 +33,7 @@ const uint8_t USB0_MIDI_DeviceDescriptor[] = {
 const uint8_t USB1_MIDI_DeviceDescriptor[] = {
   USB_DEVICE_DESC_SIZE,       /* bLength */
   USB_DEVICE_DESCRIPTOR_TYPE, /* bDescriptorType */
-  WBVAL(BCDUSB_2_0),          /* bcdUSB */
+  WBVAL(BCDUSB_1_1),          /* bcdUSB */
   0x00,                       /* bDeviceClass */
   0x00,                       /* bDeviceSubClass */
   0x00,                       /* bDeviceProtocol */

@@ -5,7 +5,7 @@
 //  1.05 : added LED test sysex command
 //  1.06 : added: Reset after successful flashing, detach all USB before flashing, auto-detect board type
 //  2.01 : use assigned ID's for USB and MIDI SysEx, shorter time-outs until stalling packets are dropped, fixed resume bug
-//  2.02 : added Unique Device ID
+//  2.02 : added Unique Device ID, auto-detect board type extended for latest PCB revision
 
 >>> Firmware Update Instructions <<<
 
@@ -25,24 +25,34 @@ try to deliver the MIDI data on the other port as in normal operation.
   - load Firmware SysEx file
   - send to MIDI Bridge
   
-If the firmware update was successful, the MIDI Bridge will show that by both LEDs blinking fast in bright green color.
+If the firmware update was successful, the MIDI Bridge will show that by both LEDs blinking fast in bright green color
+for 5 seconds, then it will reset itself and show the new firmware Version with the corrsponding blink code.
 If not, try again the full cycle (note: try using also the other port of the MIDI bridge).
 
-4. Fully disconnect the MIDI Bridge and reconnect. 
-
-5. Optional Firmware Version Check:
+4. Optional Firmware Version Check:
 - Software like "MIDI Tools" must be restarted and then will show the new firmware version in the setup screen.
 - on Linux, use "usb-devices | grep -C 6 -i nonlinear"
 
-Windows hint: To remove stale entries causing wrong display of the device name, go to device manager, select "show hidden devices",
-then delete all "NLL-Bridge" entries. Do this while the MIDI Bridge is *not* plugged in, of course.
+5. Unique Device ID:
+Sadly, Windows is not capable to show the Unique Device ID correctly which is part of the device name,
+neither in the Device Manager nor anywhere else, including MIDI applications. 
+This basically defeats the purpose of the Unique Device ID, telling several apart several attached MIDI Bridges.
+Once Windows has detected a MIDI Bridge it will show any newly attached MIDI Bridges with the same name and ID
+forever from now on.
+The only way to refresh the display name is to remove all instances of the MIDI Bridge as seen by the Device Manager:
+Go to device manager, select "show hidden devices", then delete all "NLL-Bridge" entries
+(from the "Sound, video and game controllers" list), one by one. 
+Do this while the MIDI Bridge is *not* plugged in, of course.
+
+To our rescue there is an application called UsbTreeView (https://www.uwe-sieber.de/usbtreeview_e.html)
+which shows the device name and unique ID properly.
 
 
 ----------------
 
 
->>> LED test (led-test.syx) <<<
-
+>>> LED test  <<<
+Files led-test(V2.x).syx (or led-test(V1.x).syx, for Firmware Versions 1.x)
 If the first MIDI data sent to the Bridge is the LED-Test command sysex, then the LEDs will cycle through all colors
 at full brightness. This is useful for testing and mechanical alignment during assembly.
 The normal operation of the bridge is not affected, you just don't get the normal traffic display.

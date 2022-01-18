@@ -9,6 +9,9 @@
 #include "midi/MIDI_statemonitor.h"
 #include "devctl/devctl.h"
 #include "midi/nl_devctl_defs.h"
+#include "cmsis/LPC43xx.h"
+#include "cmsis/core_cm4.h"
+#include "cmsis/core_cmFunc.h"
 
 #ifdef LONG_PACKET_TIMEOUTS
 #warning "This build will use long packet timeouts!"
@@ -148,7 +151,7 @@ static inline void checkPortStatus(OP)
     return;
   }
   uint32_t online  = USB_MIDI_IsConfigured(t->portNo);
-  int      powered = (t->portNo == 0) ? pinUSB0_VBUS() : pinUSB1_VBUS();
+  int      powered = (t->portNo == 0) ? USB0_VBUS : USB1_VBUS;
 
   if (t->first)
   {

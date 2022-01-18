@@ -9,12 +9,12 @@ SECTIONS
     {
        FILL(0xff)
     	*(.text_Flash2*) /* for compatibility with previous releases */
-    	*(.text_MFlashB512*) /* for compatibility with previous releases */
+    	*(.text_MFlashB256*) /* for compatibility with previous releases */
     	*(.text.$Flash2*)
-    	*(.text.$MFlashB512*)
+    	*(.text.$MFlashB256*)
     	*(.rodata.$Flash2*)
-    	*(.rodata.$MFlashB512*)
-    } > MFlashB512
+    	*(.rodata.$MFlashB256*)
+    } > MFlashB256
 
 /* MAIN TEXT SECTION */
     .text : ALIGN(4)
@@ -39,14 +39,14 @@ SECTIONS
 
         *(.after_vectors*)
 
-    } >MFlashA512
+    } >MFlashA256
 
     .text : ALIGN(4)    
     {
         *(.text*)
         *(.rodata .rodata.* .constdata .constdata.*)
         . = ALIGN(4);
-    } > MFlashA512
+    } > MFlashA256
 
     /*
      * for exception handling/unwind - some Newlib functions (in common
@@ -55,13 +55,13 @@ SECTIONS
     .ARM.extab : ALIGN(4) 
     {
         *(.ARM.extab* .gnu.linkonce.armextab.*)
-    } > MFlashA512
+    } > MFlashA256
     __exidx_start = .;
 
     .ARM.exidx : ALIGN(4)
     {
         *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-    } > MFlashA512
+    } > MFlashA256
     __exidx_end = .;
 
     _etext = .;
@@ -85,7 +85,7 @@ SECTIONS
        *(.data*)
        . = ALIGN(4) ;
        _edata = . ;
-    } > RamAHB16 AT>MFlashA512
+    } > RamAHB16 AT>MFlashA256
 
 
 /* MAIN BSS SECTION (RamAHB16) */
