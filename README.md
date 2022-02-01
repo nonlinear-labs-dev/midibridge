@@ -3,7 +3,7 @@
  
 ## Project Organization
 * firmware/src contains two projects:
-  * the microcontroller main firmware application. Required packages: _cmake_, native _gcc_ and _gcc-arm-none-eabi_ cross-compiler, _libasound2-dev_. No docker encapsulation, etc. There also a project files for Windows-based LPCxpresso (for LPCXpresso v8.2.2_650 or newer) IDE (needed for flashing the initial firmware).
+  * the microcontroller main firmware application. Required packages: _cmake_, native _gcc_ and _gcc-arm-none-eabi_ cross-compiler, _libasound2-dev_. No docker encapsulation, etc. There also a project files for Windows-based LPCxpresso IDE (LPCXpresso v8.2.2_650 or newer), to be used for initial flashing of the firmware via JTAG. Only the project *"application"* is needed.
   * a uC firmware component 'in-app-flasher' to flash this firmware into the uC. The image of this flasher is uploaded into RAM via USB in form of a MIDI SysEx message and then executed. The image of the main firmware is contained (statically linked) within the in-app-flasher and hence the executed code can flash the new firmware. The final update image in form of a MIDI SysEx file can be found in the top build dir under `firmware/src/in-app-flasher/in-app-flasher.syx` and as a named duplictate `firmware/src/in-app-flasher/nlmb-fw-update-Va.bb.syx` with `a` being the major version number and `bb` being the two digit minor version number.
 * tools/mk-sysex is a helper tool mainly for use at build-time to create the proper SysEx message from the binary image of the in-app-flasher.
 * tools/perf-test is a helper tool to check/test the midi-bridge for general operation, data integrity and latency.
@@ -19,7 +19,7 @@ Toolchain setups are provided for two platforms:
 * manual build of the main application with LPCXpresso under Windows. This is currently required to build the artifact needed for flashing the *blank* uC chip at production time with a hardware JTAG programmer. A proper LPXxpresso project is needed, both to create the \*.axf file first and then to flash the artifact anytime later.
 
 
-### Inner dependencies
+#### Inner dependencies (only relevant for live-update of units which run Firmware Version 1.xx)
 Whenever there is a change in any of the header parameters of the SysEx message (see doc/SysEx_DeviceInterface_V1.0.odt) in a new firmware revision, it is important to use the mk-sysex tool from the *current* firmware revision installed in the product to create the SysEx. Otherwise the device will reject the SysEx message.
 Currently, the way to accomplish this in the build is to trick the build into using another, the older, *mk-sysex* than the one it just compliled:
 - make a clean build (``make clean; make``) of the current firmware of the product and save the *mk-sysex* executable somewhere.
