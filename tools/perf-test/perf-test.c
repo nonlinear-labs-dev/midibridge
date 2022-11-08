@@ -30,6 +30,7 @@ typedef enum
 } BOOL;
 
 static BOOL           send;   // flag for program function: 1-->send , 0-->receive
+static BOOL           local;  // flag for using local relative time
 static char const *   pName;  // port name
 static snd_rawmidi_t *port;   // MIDI port
 static BOOL           stop;
@@ -61,9 +62,10 @@ static void usage(void)
       "\n"
       "-s     : send test data\n"
       "-r     : receive test data\n"
+      "-rl    : receive test data, use relative local time\n"
       "port   : MIDI port to test (in hw:x,y,z notation, see ouput of 'amidi -l'\n"
       "blksize: fixed block size of data chunk, for send only\n"
-      "         (also disables sleep time between messages)\n");
+      "         (also forces a constant 1ms sleep time between messages)\n");
 }
 
 static inline void getCmdLineParams(int const argc, char const *const argv[])
@@ -79,6 +81,11 @@ static inline void getCmdLineParams(int const argc, char const *const argv[])
     send = TRUE;
   else if (strlen(argv[1]) == 2 && 0 == strcmp(argv[1], "-r"))
     send = FALSE;
+  else if (strlen(argv[1]) == 3 && 0 == strcmp(argv[1], "-rl"))
+  {
+    send  = FALSE;
+    local = TRUE;
+  }
   else
   {
     error("illegal parameter '%s'\n", argv[1]);
@@ -120,8 +127,7 @@ static inline void closePort(void)
 
 static void sigHandler(int dummy)
 {
-  stop  = TRUE;
-  dummy = dummy;
+  dummy = stop = TRUE;
 }
 
 static uint64_t getTimeUSec(void)
@@ -289,7 +295,10 @@ static inline void doSend(void)
         time = 1000ul * 1000ul;
 
       uint64_t sleepTime = getTimeUSec();
-      usleep((blkSize >= 0) ? 100 : time);  // don't dynamically pause with constant block sizes
+      if (blkSize < 0)  // dynamically pause with non-constant block sizes
+        usleep(time);
+      else
+        usleep(1000);
       sleepTime = getTimeUSec() - sleepTime;
       messageTime += sleepTime;
     }
@@ -303,29 +312,35 @@ static inline void doSend(void)
     totalBytes += messageLen;
     messageTime = tmp - messageTime;
 
-    static uint64_t min = ~(uint64_t) 0;
-    static uint64_t max = 0;
-    static uint32_t cnt = 0;
-    static uint64_t sum = 0;
+    static uint64_t min         = ~(uint64_t) 0;
+    static uint64_t max         = 0;
+    static uint32_t cnt         = 0;
+    static uint64_t sum         = 0;
+    static uint64_t period      = 0;
+    static uint64_t displayTime = 0;
 
     if (messageTime > max)
       max = messageTime;
     if (messageTime < min)
       min = messageTime;
     sum += messageTime;
+    period += (tmp - now);
     cnt++;
 
     if (cnt == 1000)
     {
       cnt /= 2;
       sum /= 2;
+      period /= 2;
     }
-    if (tmp - now > 300000)
+    now = tmp;
+
+    if (now > displayTime)
     {
-      now = tmp;
+      displayTime = now + 100000;
       cursorUp(2);
-      printf("%6.2lfms(min) %6.2lfms(max) %6.2lfms(avg)  %6.2lfkB/s\n\n",
-             ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt,
+      printf("%6.2lfms(min) %6.2lfms(max) %6.2lfms(avg) %6.2lfms(period)  %6.2lfkB/s\n\n",
+             ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt, ((double) period) / 1000.0 / cnt,
              1000.0 * (double) totalBytes / (double) (getTimeUSec() - startTime));
       fflush(stdout);
       max = max * 0.99;
@@ -346,6 +361,7 @@ uint64_t rcvNow;
 
 static inline BOOL examineContent(void const *const data, unsigned const len)
 {
+  static uint64_t displayTime = 0;
   if (len < 24)
   {
     error("receive: payload has wrong minimum length %d, expected %d", len, 16);
@@ -388,8 +404,13 @@ static inline BOOL examineContent(void const *const data, unsigned const len)
   }
 
   rcvTotalBytes += packetSize;
-  uint64_t const tmp  = getTimeUSec();
-  uint64_t       time = tmp - packetTime;
+  uint64_t const now = getTimeUSec();
+  uint64_t       time;
+
+  if (local)
+    time = now - rcvNow;
+  else
+    time = now - packetTime;
 
   static uint64_t min = ~(uint64_t) 0;
   static uint64_t max = 0;
@@ -408,9 +429,10 @@ static inline BOOL examineContent(void const *const data, unsigned const len)
     cnt /= 2;
     sum /= 2;
   }
-  if (tmp - rcvNow > 300000)
+  rcvNow = now;
+  if (now > displayTime)
   {
-    rcvNow = tmp;
+    displayTime = now + 100000;
     cursorUp(2);
     printf("%6.2lfms(min) %6.2lfms(max) %6.2lfms(avg)  %6.2lfkB/s\n\n",
            ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt,
@@ -523,7 +545,7 @@ static inline void doReceive(void)
 
   do
   {
-    err = poll(pfds, npfds, 0);               // poll as fast as possible
+    err = poll(pfds, npfds, 10);              // timeout if no data even after 10msec
     if (stop || (err < 0 && errno == EINTR))  // interrupted ?
       break;
     if (err < 0)
