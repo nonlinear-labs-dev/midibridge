@@ -125,10 +125,13 @@ static inline void closePort(void)
   snd_rawmidi_close(port);
 }
 
-static void sigHandler(int dummy)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+static void            sigHandler(int dummy)
 {
-  dummy = stop = TRUE;
+  stop = TRUE;
 }
+#pragma GCC diagnostic pop
 
 static uint64_t getTimeUSec(void)
 {
