@@ -23,6 +23,14 @@
 
 #define SEND_WAIT_MS (1ul)  // milliseconds to wait when send buffer is going to overrun
 
+#define DISPLAY_PERIOD (1000000u)
+#define MAX_DEGEN      (0.97)
+#define MIN_DEGEN      (0.97)
+
+#define TTY_DEFAULT "\033[0m"
+#define TTY_RED     "\033[0;31m"
+#define TTY_GREEN   "\033[0;32m"
+
 typedef enum
 {
   FALSE = 0,
@@ -221,6 +229,9 @@ static inline void doSend(void)
   uint64_t totalBytes = 0;
   uint64_t now        = startTime;
 
+  unsigned maxCntr = 0;
+  unsigned minCntr = 0;
+
   do
   {
     memset(dataBuf, runningCntr++, sizeof(dataBuf));
@@ -323,14 +334,14 @@ static inline void doSend(void)
     static uint64_t displayTime = 0;
 
     if (messageTime > max)
-      max = messageTime;
+      maxCntr = 6, max = messageTime;
     if (messageTime < min)
-      min = messageTime;
+      minCntr = 6, min = messageTime;
     sum += messageTime;
     period += (tmp - now);
     cnt++;
 
-    if (cnt == 1000)
+    if (cnt == 10000)
     {
       cnt /= 2;
       sum /= 2;
@@ -340,14 +351,30 @@ static inline void doSend(void)
 
     if (now > displayTime)
     {
-      displayTime = now + 100000;
+      displayTime = now + DISPLAY_PERIOD;
       cursorUp(2);
-      printf("%6.2lfms(min) %6.2lfms(max) %6.2lfms(avg) %6.2lfms(period)  %6.2lfkB/s\n\n",
-             ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt, ((double) period) / 1000.0 / cnt,
+      printf("%s%6.2lfms(min) %s%6.2lfms(max)" TTY_DEFAULT " %6.2lfms(avg) %6.2lfms(period)  %6.2lfkB/s\n\n",
+             minCntr == 0 ? TTY_DEFAULT : (minCntr >= 6 ? TTY_RED : TTY_GREEN), ((double) min) / 1000.0,
+             maxCntr == 0 ? TTY_DEFAULT : (maxCntr >= 6 ? TTY_RED : TTY_GREEN), ((double) max) / 1000.0,
+             ((double) sum) / 1000.0 / cnt,
+             ((double) period) / 1000.0 / cnt,
              1000.0 * (double) totalBytes / (double) (getTimeUSec() - startTime));
       fflush(stdout);
-      max = max * 0.99;
-      min = min / 0.80;
+
+      if (maxCntr)
+        maxCntr--;
+      if (minCntr)
+        minCntr--;
+
+      if (max > 10 * sum / cnt)
+        max = max * 0.9;
+      else
+        max = max * MAX_DEGEN;
+
+      if (min * 10 > sum / cnt)
+        min = min / 0.9;
+      else
+        min = min / MIN_DEGEN;
     }
 
   } while (TRUE);
@@ -364,6 +391,9 @@ uint64_t rcvNow;
 
 static inline BOOL examineContent(void const *const data, unsigned const len)
 {
+  static unsigned maxCntr = 0;
+  static unsigned minCntr = 0;
+
   static uint64_t displayTime = 0;
   if (len < 24)
   {
@@ -421,13 +451,13 @@ static inline BOOL examineContent(void const *const data, unsigned const len)
   static uint64_t sum = 0;
 
   if (time > max)
-    max = time;
+    maxCntr = 6, max = time;
   if (time < min)
-    min = time;
+    minCntr = 6, min = time;
   sum += time;
   cnt++;
 
-  if (cnt == 1000)
+  if (cnt == 10000)
   {
     cnt /= 2;
     sum /= 2;
@@ -435,14 +465,29 @@ static inline BOOL examineContent(void const *const data, unsigned const len)
   rcvNow = now;
   if (now > displayTime)
   {
-    displayTime = now + 100000;
+    displayTime = now + DISPLAY_PERIOD;
     cursorUp(2);
-    printf("%6.2lfms(min) %6.2lfms(max) %6.2lfms(avg)  %6.2lfkB/s\n\n",
-           ((double) min) / 1000.0, ((double) max) / 1000.0, ((double) sum) / 1000.0 / cnt,
+    printf("%s%6.2lfms(min) %s%6.2lfms(max) " TTY_DEFAULT "%6.2lfms(avg)  %6.2lfkB/s\n\n",
+           minCntr == 0 ? TTY_DEFAULT : (minCntr >= 6 ? TTY_RED : TTY_GREEN), ((double) min) / 1000.0,
+           maxCntr == 0 ? TTY_DEFAULT : (maxCntr >= 6 ? TTY_RED : TTY_GREEN), ((double) max) / 1000.0,
+           ((double) sum) / 1000.0 / cnt,
            1000.0 * (double) rcvTotalBytes / (double) (getTimeUSec() - rcvStartTime));
     fflush(stdout);
-    max = max * 0.99;
-    min = min / 0.80;
+
+    if (maxCntr)
+      maxCntr--;
+    if (minCntr)
+      minCntr--;
+
+    if (max > 10 * sum / cnt)
+      max = max * 0.9;
+    else
+      max = max * MAX_DEGEN;
+
+    if (min * 10 > sum / cnt)
+      min = min / 0.9;
+    else
+      min = min / MIN_DEGEN;
   }
   return TRUE;
 }
