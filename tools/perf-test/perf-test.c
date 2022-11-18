@@ -42,7 +42,8 @@ static BOOL           local;  // flag for using local relative time
 static char const *   pName;  // port name
 static snd_rawmidi_t *port;   // MIDI port
 static BOOL           stop;
-static int            blkSize = -1;
+static int            blkSize   = -1;
+static int            delayInUs = 1000;
 
 static BOOL dump = FALSE;
 
@@ -66,19 +67,20 @@ static void cursorUp(uint8_t lines)
 static void usage(void)
 {
   printf(
-      "Usage: perf-test -s|-r port [blksize]\n"
+      "Usage: perf-test -s|-r port [blksize [delay]]\n"
       "\n"
       "-s     : send test data\n"
       "-r     : receive test data\n"
       "-rl    : receive test data, use relative local time\n"
       "port   : MIDI port to test (in hw:x,y,z notation, see ouput of 'amidi -l'\n"
       "blksize: fixed block size of data chunk, for send only\n"
-      "         (also forces a constant 1ms sleep time between messages)\n");
+      "         (also forces a constant <delay> sleep time between messages)\n"
+      "delay  : delay between messages in millisconds, default is 1\n");
 }
 
 static inline void getCmdLineParams(int const argc, char const *const argv[])
 {
-  if (argc != 3 && argc != 4)
+  if (argc != 3 && argc != 4 && argc != 5)
   {
     error("missing parameters\n");
     usage();
@@ -103,13 +105,25 @@ static inline void getCmdLineParams(int const argc, char const *const argv[])
 
   pName = argv[2];
 
-  if (argc == 4)
+  if (argc >= 4)
   {
-    if ((1 != sscanf(argv[3], "%i", &blkSize)) || (blkSize < 0))
+    if ((1 != sscanf(argv[3], "%i", &blkSize)) || (blkSize < 0) || (blkSize > 99000))
     {
-      error("illegal block size\n");
+      error("illegal block size (must be 1...99000\n");
       usage();
       exit(1);
+    }
+    if (argc > 4)
+    {
+      if ((1 != sscanf(argv[4], "%i", &delayInUs)) || (delayInUs < 0))
+      {
+        error("illegal delay\n");
+        usage();
+        exit(1);
+      }
+      delayInUs *= 1000;
+      if (delayInUs < 1)
+        delayInUs = 1;
     }
   }
 }
@@ -155,7 +169,13 @@ static uint64_t getTimeUSec(void)
 // -------- functions for sending --------
 //
 
-static inline int encodeSysex(void const *const pSrc, int len, void *const pDest)
+uint64_t sndStartTime      = 0;
+uint64_t sndTotalTime      = 1;
+uint64_t sndTotalBytes     = 1;
+uint64_t sndTime           = 0;
+uint64_t sndLastPacketTime = 0;
+
+static inline int encodeSysex(void const *const pSrc, int len, uint8_t *const pDest)
 {
   uint8_t *src         = (uint8_t *) pSrc;
   uint8_t *dst         = (uint8_t *) pDest;
@@ -186,7 +206,7 @@ static inline int encodeSysex(void const *const pSrc, int len, void *const pDest
 
   // write end of sysex
   *(dst++) = 0xF7;
-  return (void *) dst - pDest;  // total bytes written to destination buffer;
+  return dst - pDest;  // total bytes written to destination buffer;
 }
 
 static inline void doSend(void)
@@ -224,10 +244,6 @@ static inline void doSend(void)
   uint64_t messageNo   = 0;
 
   printf("Sending data to port: %s\n\n\n", pName);
-
-  uint64_t startTime  = getTimeUSec();
-  uint64_t totalBytes = 0;
-  uint64_t now        = startTime;
 
   unsigned maxCntr = 0;
   unsigned minCntr = 0;
@@ -312,7 +328,7 @@ static inline void doSend(void)
       if (blkSize < 0)  // dynamically pause with non-constant block sizes
         usleep(time);
       else
-        usleep(1000);
+        usleep(delayInUs);
       sleepTime = getTimeUSec() - sleepTime;
       messageTime += sleepTime;
     }
@@ -321,10 +337,13 @@ static inline void doSend(void)
       ;  //printf("total of %d bytes transferred\n", total);
     }
 
-    uint64_t tmp = getTimeUSec();
-
-    totalBytes += messageLen;
-    messageTime = tmp - messageTime;
+    uint64_t const now = getTimeUSec();
+    messageTime        = now - messageTime;
+    if (sndStartTime == 0)
+      sndStartTime = now;
+    else
+      sndTotalBytes += messageLen;
+    sndTotalTime = (now - sndStartTime);
 
     static uint64_t min         = ~(uint64_t) 0;
     static uint64_t max         = 0;
@@ -338,7 +357,9 @@ static inline void doSend(void)
     if (messageTime < min)
       minCntr = 6, min = messageTime;
     sum += messageTime;
-    period += (tmp - now);
+
+    if (sndLastPacketTime)
+      period += (now - sndLastPacketTime);
     cnt++;
 
     if (cnt == 10000)
@@ -347,7 +368,7 @@ static inline void doSend(void)
       sum /= 2;
       period /= 2;
     }
-    now = tmp;
+    sndLastPacketTime = now;
 
     if (now > displayTime)
     {
@@ -358,7 +379,7 @@ static inline void doSend(void)
              maxCntr == 0 ? TTY_DEFAULT : (maxCntr >= 6 ? TTY_RED : TTY_GREEN), ((double) max) / 1000.0,
              ((double) sum) / 1000.0 / cnt,
              ((double) period) / 1000.0 / cnt,
-             1000.0 * (double) totalBytes / (double) (getTimeUSec() - startTime));
+             1000.0 * (double) sndTotalBytes / (double) sndTotalTime);
       fflush(stdout);
 
       if (maxCntr)
@@ -385,9 +406,11 @@ static inline void doSend(void)
 //
 
 uint64_t packetCntr;
-uint64_t rcvStartTime;
-uint64_t rcvTotalBytes = 0;
-uint64_t rcvNow;
+uint64_t rcvStartTime      = 0;
+uint64_t rcvTotalTime      = 1;
+uint64_t rcvTotalBytes     = 0;
+uint64_t rcvTime           = 0;
+uint64_t rcvLastPacketTime = 0;
 
 static inline BOOL examineContent(void const *const data, unsigned const len)
 {
@@ -436,12 +459,14 @@ static inline BOOL examineContent(void const *const data, unsigned const len)
     }
   }
 
-  rcvTotalBytes += packetSize;
   uint64_t const now = getTimeUSec();
-  uint64_t       time;
+  if (rcvLastPacketTime == 0)
+    rcvLastPacketTime = now;
+
+  uint64_t time;
 
   if (local)
-    time = now - rcvNow;
+    time = now - rcvLastPacketTime;
   else
     time = now - packetTime;
 
@@ -462,16 +487,17 @@ static inline BOOL examineContent(void const *const data, unsigned const len)
     cnt /= 2;
     sum /= 2;
   }
-  rcvNow = now;
+  rcvLastPacketTime = now;
   if (now > displayTime)
   {
     displayTime = now + DISPLAY_PERIOD;
     cursorUp(2);
-    printf("%s%6.2lfms(min) %s%6.2lfms(max) " TTY_DEFAULT "%6.2lfms(avg)  %6.2lfkB/s\n\n",
+    printf("%s%6.2lfms(min) %s%6.2lfms(max) " TTY_DEFAULT "%6.2lfms(avg) %s  %6.2lfkB/s\n\n",
            minCntr == 0 ? TTY_DEFAULT : (minCntr >= 6 ? TTY_RED : TTY_GREEN), ((double) min) / 1000.0,
            maxCntr == 0 ? TTY_DEFAULT : (maxCntr >= 6 ? TTY_RED : TTY_GREEN), ((double) max) / 1000.0,
            ((double) sum) / 1000.0 / cnt,
-           1000.0 * (double) rcvTotalBytes / (double) (getTimeUSec() - rcvStartTime));
+           local ? "<-period" : "",
+           1000.0 * (double) rcvTotalBytes / (double) rcvTotalTime);
     fflush(stdout);
 
     if (maxCntr)
@@ -588,9 +614,6 @@ static inline void doReceive(void)
 
   printf("Receiving data from port: %s\n\n\n", pName);
 
-  rcvStartTime = getTimeUSec();
-  rcvNow       = rcvStartTime;
-
   do
   {
     err = poll(pfds, npfds, 10);              // timeout if no data even after 10msec
@@ -628,6 +651,11 @@ static inline void doReceive(void)
       break;
     }
 
+    if (rcvStartTime == 0)
+      rcvStartTime = getTimeUSec();
+    else
+      rcvTotalBytes += read;
+    rcvTotalTime = (getTimeUSec() - rcvStartTime);
     for (int i = 0; i < read; ++i)
     {
       if (!parseReceivedByte(buf[i]))  // parser error
