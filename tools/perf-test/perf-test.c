@@ -374,10 +374,10 @@ static inline void doSend(void)
     {
       displayTime = now + DISPLAY_PERIOD;
       cursorUp(2);
-      printf("%s%6.2lfms(min) %s%6.2lfms(max)" TTY_DEFAULT " %6.2lfms(avg) %6.2lfms(period)  %6.2lfkB/s\n\n",
+      printf("%s%6.2lfms(min)" TTY_DEFAULT " %6.2lfms(avg) %s%6.2lfms(max)" TTY_DEFAULT " %6.2lfms(period)  %6.2lfkB/s\n\n",
              minCntr == 0 ? TTY_DEFAULT : (minCntr >= 6 ? TTY_RED : TTY_GREEN), ((double) min) / 1000.0,
-             maxCntr == 0 ? TTY_DEFAULT : (maxCntr >= 6 ? TTY_RED : TTY_GREEN), ((double) max) / 1000.0,
              ((double) sum) / 1000.0 / cnt,
+             maxCntr == 0 ? TTY_DEFAULT : (maxCntr >= 6 ? TTY_RED : TTY_GREEN), ((double) max) / 1000.0,
              ((double) period) / 1000.0 / cnt,
              1000.0 * (double) sndTotalBytes / (double) sndTotalTime);
       fflush(stdout);
@@ -492,10 +492,10 @@ static inline BOOL examineContent(void const *const data, unsigned const len)
   {
     displayTime = now + DISPLAY_PERIOD;
     cursorUp(2);
-    printf("%s%6.2lfms(min) %s%6.2lfms(max) " TTY_DEFAULT "%6.2lfms(avg) %s  %6.2lfkB/s\n\n",
+    printf("%s%6.2lfms(min)" TTY_DEFAULT " %6.2lfms(avg) %s%6.2lfms(max) " TTY_DEFAULT " %s  %6.2lfkB/s\n\n",
            minCntr == 0 ? TTY_DEFAULT : (minCntr >= 6 ? TTY_RED : TTY_GREEN), ((double) min) / 1000.0,
-           maxCntr == 0 ? TTY_DEFAULT : (maxCntr >= 6 ? TTY_RED : TTY_GREEN), ((double) max) / 1000.0,
            ((double) sum) / 1000.0 / cnt,
+           maxCntr == 0 ? TTY_DEFAULT : (maxCntr >= 6 ? TTY_RED : TTY_GREEN), ((double) max) / 1000.0,
            local ? "<-period" : "",
            1000.0 * (double) rcvTotalBytes / (double) rcvTotalTime);
     fflush(stdout);
