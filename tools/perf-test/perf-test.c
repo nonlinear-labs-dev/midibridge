@@ -75,7 +75,7 @@ static void usage(void)
       "port   : MIDI port to test (in hw:x,y,z notation, see ouput of 'amidi -l'\n"
       "blksize: fixed block size of data chunk, for send only\n"
       "         (also forces a constant <delay> sleep time between messages)\n"
-      "delay  : delay between messages in millisconds, default is 1\n");
+      "delay  : delay between messages in millisconds, default is 1, negative forces single-run\n");
 }
 
 static inline void getCmdLineParams(int const argc, char const *const argv[])
@@ -115,15 +115,18 @@ static inline void getCmdLineParams(int const argc, char const *const argv[])
     }
     if (argc > 4)
     {
-      if ((1 != sscanf(argv[4], "%i", &delayInUs)) || (delayInUs < 0))
+      if (1 != sscanf(argv[4], "%i", &delayInUs))
       {
         error("illegal delay\n");
         usage();
         exit(1);
       }
-      delayInUs *= 1000;
-      if (delayInUs < 1)
+      if (delayInUs < 0)
+        delayInUs = 0;
+      else if (delayInUs == 0)
         delayInUs = 1;
+      else if (delayInUs > 0)
+        delayInUs *= 1000;
     }
   }
 }
@@ -241,7 +244,7 @@ static inline void doSend(void)
   // messageLen = encodeSysex(dataBuf, PAYLOAD_SIZE, sendBuf);
   // printf("sysex size: %d\n", messageLen);
   uint8_t  runningCntr = 0;
-  uint64_t messageNo   = 0;
+  uint64_t messageNo   = delayInUs != 0 ? 0 : 0x0000000100000000ull | (uint64_t) rand();
 
   printf("Sending data to port: %s\n\n\n", pName);
 
@@ -328,7 +331,7 @@ static inline void doSend(void)
       if (blkSize < 0)  // dynamically pause with non-constant block sizes
         usleep(time);
       else
-        usleep(delayInUs);
+        usleep(delayInUs > 0 ? delayInUs : 1);
       sleepTime = getTimeUSec() - sleepTime;
       messageTime += sleepTime;
     }
@@ -398,6 +401,9 @@ static inline void doSend(void)
         min = min / MIN_DEGEN;
     }
 
+    if (delayInUs == 0)
+      return;
+
   } while (TRUE);
 }
 
@@ -436,13 +442,14 @@ static inline BOOL examineContent(void const *const data, unsigned const len)
 
   if (packetCntr++ != 0)
   {
-    if (packetNumber != packetCntr)
-    {
-      error("receive: packet has wrong number %" PRIu64 ", expected %" PRIu64, packetNumber, packetCntr);
-      return FALSE;
-    }
+    if ((packetNumber & 0x0000000100000000ull) == 0)
+      if (packetNumber != packetCntr)
+      {
+        error(">>receive: packet has wrong number %" PRIu64 ", expected %" PRIu64, packetNumber, packetCntr);
+      }
   }
   packetCntr = packetNumber;
+  srand(packetNumber);
 
   cursorUp(1);
   printf("n:%" PRIu64 ", s:%5" PRIu64 "\n", packetNumber, packetSize);
@@ -688,6 +695,7 @@ int main(int argc, char const *const argv[])
 {
   getCmdLineParams(argc, argv);
   openPort();
+  srand(time(0));
   if (send)
     doSend();
   else
